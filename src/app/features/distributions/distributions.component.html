@@ -1,0 +1,135 @@
+<section class="page-heading distribution-heading">
+  <div>
+    <p class="eyebrow">Laboratorio de probabilidad</p>
+    <h1>Distribuciones, de la fórmula a los datos</h1>
+  </div>
+  <p class="lede">Calcula probabilidades con parámetros explícitos o contrasta qué modelo describe mejor una variable de tu muestra.</p>
+</section>
+
+<div class="mode-switch distribution-modes" role="tablist" aria-label="Modo de distribuciones">
+  <button type="button" role="tab" [attr.aria-selected]="mode() === 'calculator'" [class.active]="mode() === 'calculator'" (click)="selectMode('calculator')">Calculadora</button>
+  <button type="button" role="tab" [attr.aria-selected]="mode() === 'identify'" [class.active]="mode() === 'identify'" (click)="selectMode('identify')">Identificar distribución</button>
+</div>
+
+@if (mode() === 'calculator') {
+  <div class="distribution-workbench">
+    <aside class="control-sheet distribution-controls">
+      <div class="control-title"><div><p class="eyebrow">Modelo</p><h2>{{ definition().label }}</h2></div><span [class.discrete]="definition().discrete">{{ definition().discrete ? 'DISCRETA' : 'CONTINUA' }}</span></div>
+      <mat-form-field appearance="outline">
+        <mat-label>Distribución</mat-label>
+        <mat-select [ngModel]="distributionId()" (ngModelChange)="selectDistribution($event)">
+          @for (item of distributions; track item.id) { <mat-option [value]="item.id">{{ item.label }}</mat-option> }
+        </mat-select>
+      </mat-form-field>
+      <p class="domain-note"><mat-icon aria-hidden="true">info</mat-icon><span><strong>Dominio</strong>{{ definition().domain }}</span></p>
+
+      <fieldset class="parameter-grid">
+        <legend>Parámetros</legend>
+        @for (parameter of definition().parameters; track parameter.key) {
+          <mat-form-field appearance="outline" [title]="parameter.hint">
+            <mat-label>{{ parameter.label }}</mat-label>
+            <input matInput type="number" [(ngModel)]="parameterValues[parameter.key]" [min]="parameter.min ?? null" [max]="parameter.max ?? null" [step]="parameter.step ?? 'any'">
+            <mat-hint>{{ parameter.hint }}</mat-hint>
+          </mat-form-field>
+        }
+      </fieldset>
+
+      <fieldset class="curve-range">
+        <legend>Rango de curva <span>opcional</span></legend>
+        <mat-form-field appearance="outline"><mat-label>Mínimo</mat-label><input matInput type="number" [(ngModel)]="values['x_min']"></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Máximo</mat-label><input matInput type="number" [(ngModel)]="values['x_max']"></mat-form-field>
+      </fieldset>
+    </aside>
+
+    <section class="distribution-stage">
+      <div class="operation-ribbon" role="tablist" aria-label="Operación de probabilidad">
+        @for (item of operations; track item.id) {
+          <button type="button" role="tab" [attr.aria-selected]="operation() === item.id" [class.active]="operation() === item.id" (click)="selectOperation(item.id)">
+            <mat-icon aria-hidden="true">{{ item.icon }}</mat-icon><span>{{ operationLabel(item) }}</span>
+          </button>
+        }
+      </div>
+
+      <div class="operation-inputs">
+        @if (operation() === 'pdf' || operation() === 'cdf' || operation() === 'sf') {
+          <mat-form-field appearance="outline"><mat-label>Valor x</mat-label><input matInput type="number" [(ngModel)]="values['x']"><mat-hint>{{ definition().discrete ? 'Usa un valor entero' : 'Punto de evaluación' }}</mat-hint></mat-form-field>
+        } @else if (operation() === 'ppf') {
+          <mat-form-field appearance="outline"><mat-label>Probabilidad q</mat-label><input matInput type="number" min="0" max="1" step="0.01" [(ngModel)]="values['q']"><mat-hint>Entre 0 y 1</mat-hint></mat-form-field>
+        } @else if (operation() === 'interval') {
+          <mat-form-field appearance="outline"><mat-label>Nivel de confianza</mat-label><input matInput type="number" min="0" max="1" step="0.01" [(ngModel)]="values['confidence']"><mat-hint>Por ejemplo, 0.95</mat-hint></mat-form-field>
+        } @else {
+          <mat-form-field appearance="outline"><mat-label>Tamaño</mat-label><input matInput type="number" min="1" step="1" [(ngModel)]="values['size']"></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Semilla</mat-label><input matInput type="number" min="0" step="1" [(ngModel)]="values['seed']"></mat-form-field>
+        }
+        <button mat-flat-button class="primary-action calculate-action" type="button" [disabled]="calculating() || curveLoading()" (click)="calculate()">
+          @if (calculating() || curveLoading()) { <mat-spinner diameter="18" /> } @else { <mat-icon>calculate</mat-icon> }
+          Calcular
+        </button>
+      </div>
+
+      <div class="calculation-output" aria-live="polite">
+        <article class="number-card">
+          <p class="eyebrow">Resultado numérico</p>
+          @if (calculationError(); as error) { <div class="message error" role="alert"><mat-icon>error_outline</mat-icon>{{ error }}</div> }
+          @if (calculation(); as response) {
+            <div class="value-list">
+              @for (entry of calculationEntries(); track entry.label) { <div><span>{{ entry.label }}</span><strong>{{ format(entry.value) }}</strong></div> }
+              @if (!calculationEntries().length) { <div><span>resultado</span><strong>{{ format(response.results) }}</strong></div> }
+            </div>
+            <p class="result-interpretation">{{ response.interpretation }}</p>
+          } @else if (!calculating() && !calculationError()) {
+            <div class="compact-empty"><span>f(x)</span><p>Define la operación y calcula.</p></div>
+          }
+        </article>
+
+        <article class="curve-card">
+          <div class="plot-heading"><div><p class="eyebrow">Curva</p><h2>{{ definition().label }}</h2></div>@if (curveLoading()) { <mat-spinner diameter="22" /> }</div>
+          @if (curveError(); as error) { <div class="message error" role="alert"><mat-icon>error_outline</mat-icon>{{ error }}</div> }
+          @if (curveData(); as traces) { <app-plotly-chart [data]="traces" [layout]="curveLayout()" [ariaLabel]="'Curva de la distribución ' + definition().label" /> }
+          @else if (!curveLoading() && !curveError()) { <div class="plot-placeholder"><mat-icon>area_chart</mat-icon><p>La curva aparecerá junto al resultado.</p></div> }
+        </article>
+      </div>
+    </section>
+  </div>
+} @else {
+  @if (data.dataset(); as dataset) {
+    <div class="identify-layout">
+      <aside class="control-sheet identify-controls">
+        <p class="eyebrow">Muestra activa</p><h2>Buscar el mejor ajuste</h2>
+        <p class="form-description">Compara candidatos sin detener el análisis cuando uno de ellos falla.</p>
+        <mat-form-field appearance="outline"><mat-label>Columna numérica</mat-label><mat-select [(ngModel)]="column">@for (item of dataset.columns; track item.name) { @if (item.type === 'numérico') { <mat-option [value]="item.name">{{ item.name }}</mat-option> } }</mat-select></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Distribuciones candidatas</mat-label><mat-select [(ngModel)]="candidates" multiple>@for (item of fitCandidates; track item.id) { <mat-option [value]="item.id">{{ item.label }}</mat-option> }</mat-select><mat-hint>{{ candidates.length }} seleccionadas</mat-hint></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Réplicas bootstrap</mat-label><input matInput type="number" min="20" max="1000" step="20" [(ngModel)]="bootstrapReps"><mat-hint>Más réplicas aumentan precisión y tiempo</mat-hint></mat-form-field>
+        <button mat-flat-button class="primary-action full" type="button" [disabled]="!column || !candidates.length || identifying()" (click)="identify()">@if (identifying()) { <mat-spinner diameter="18" /> } @else { <mat-icon>manage_search</mat-icon> } Identificar</button>
+        @if (identifyError(); as error) { <div class="message error" role="alert"><mat-icon>error_outline</mat-icon>{{ error }}</div> }
+      </aside>
+
+      <section class="identification-results" aria-live="polite">
+        @if (identification(); as result) {
+          <article class="ranking-card">
+            <div class="panel-heading"><div><p class="eyebrow">Comparación</p><h2>Ranking de ajuste</h2></div><span class="best-stamp">Mejor: {{ result.bestDistribution }}</span></div>
+            <div class="table-scroll"><table><thead><tr><th>Distribución</th><th>AD</th><th>p</th><th>AIC</th><th>BIC</th></tr></thead><tbody>@for (row of result.ranking; track row.distribution) { <tr [class.best-row]="row.distribution === result.bestDistribution"><td><strong>{{ row.distribution }}</strong></td><td>{{ format(row.ad) }}</td><td>{{ format(row.pValue) }}</td><td>{{ format(row.aic) }}</td><td>{{ format(row.bic) }}</td></tr> }</tbody></table></div>
+            @if (result.failures.length) { <details class="candidate-failures"><summary>{{ result.failures.length }} candidatos no pudieron ajustarse</summary>@for (failure of result.failures; track failure.distribution) { <p><strong>{{ failure.distribution }}</strong> · {{ failure.reason }}</p> }</details> }
+          </article>
+
+          <article class="fit-card">
+            <div class="fit-toolbar">
+              <div><p class="eyebrow">Diagnóstico visual</p><h2>Gráfico de probabilidad</h2></div>
+              <mat-form-field appearance="outline"><mat-label>Distribución</mat-label><mat-select [(ngModel)]="fitDistribution">@for (row of result.ranking; track row.distribution) { <mat-option [value]="row.distribution">{{ row.distribution }}</mat-option> }</mat-select></mat-form-field>
+              <mat-form-field appearance="outline"><mat-label>Confianza</mat-label><input matInput type="number" min="0" max="1" step="0.01" [(ngModel)]="confidence"></mat-form-field>
+              <button mat-flat-button class="primary-action" type="button" [disabled]="!fitDistribution || fitting()" (click)="evaluateFit()">@if (fitting()) { <mat-spinner diameter="18" /> } @else { <mat-icon>query_stats</mat-icon> } Evaluar ajuste</button>
+            </div>
+            @if (fitError(); as error) { <div class="message error" role="alert"><mat-icon>error_outline</mat-icon>{{ error }}</div> }
+            @if (probabilityData(); as traces) { <app-plotly-chart [data]="traces" [layout]="probabilityLayout()" ariaLabel="Gráfico de probabilidad con banda de confianza" /> }
+            @else if (!fitting()) { <div class="plot-placeholder small"><mat-icon>scatter_plot</mat-icon><p>Evalúa una distribución para revisar puntos, referencia y banda de confianza.</p></div> }
+            @if (fitResult() || goodnessResult()) { <div class="fit-summaries">@if (fitResult(); as fit) { <div><span>Ajuste</span><code>{{ fit.results | json }}</code></div> }@if (goodnessResult(); as goodness) { <div><span>Bondad de ajuste</span><code>{{ goodness.results | json }}</code></div> }</div> }
+          </article>
+        } @else if (!identifying()) {
+          <div class="empty-identification"><span class="distribution-glyph">∿</span><h2>Un ranking, no una conjetura</h2><p>Selecciona una columna y compara las distribuciones candidatas.</p></div>
+        }
+      </section>
+    </div>
+  } @else {
+    <section class="empty-state"><mat-icon>dataset</mat-icon><h2>Necesitas una muestra</h2><p>Carga datos para identificar la distribución de una columna.</p><a mat-flat-button class="primary-action" routerLink="/">Ir a carga</a></section>
+  }
+}

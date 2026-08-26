@@ -1,0 +1,36 @@
+<section class="page-heading split-heading">
+  <div><p class="eyebrow">ANOVA</p><h1>Variación, efectos y estructura</h1></div>
+  <p class="lede">Configura diseños de uno o dos factores, medidas repetidas y comparaciones posteriores con diagnósticos legibles.</p>
+</section>
+
+@if (data.dataset(); as dataset) {
+  <div class="category-tabs anova-tabs" role="tablist" aria-label="Métodos ANOVA">
+    @for (item of operations; track item.id) { <button type="button" role="tab" [attr.aria-selected]="selectedId() === item.id" [class.active]="selectedId() === item.id" (click)="select(item.id)">{{ item.label }}</button> }
+  </div>
+  <div class="analysis-layout">
+    <aside class="control-sheet">
+      <p class="eyebrow">Diseño</p><h2>{{ operation().label }}</h2><p class="form-description">{{ operation().description }}</p>
+      @for (field of operation().fields; track field.key) {
+        @if (field.type === 'variable') {
+          <mat-form-field appearance="outline"><mat-label>{{ field.label }}</mat-label><mat-select [(ngModel)]="values[field.key]">@for (column of dataset.columns; track column.name) { <mat-option [value]="column.name">{{ column.name }} · {{ column.type }}</mat-option> }</mat-select></mat-form-field>
+        } @else if (field.type === 'choice') {
+          <mat-form-field appearance="outline"><mat-label>{{ field.label }}</mat-label><mat-select [(ngModel)]="values[field.key]">@for (option of field.options ?? []; track $index) { <mat-option [value]="option.value">{{ option.label }}</mat-option> }</mat-select></mat-form-field>
+        } @else {
+          <mat-form-field appearance="outline"><mat-label>{{ field.label }}</mat-label><input matInput [(ngModel)]="values[field.key]" /></mat-form-field>
+        }
+      }
+      <mat-form-field appearance="outline"><mat-label>Nivel α</mat-label><mat-select [(ngModel)]="alpha"><mat-option [value]="0.1">0.10</mat-option><mat-option [value]="0.05">0.05</mat-option><mat-option [value]="0.01">0.01</mat-option></mat-select></mat-form-field>
+      <button mat-flat-button class="primary-action full" type="button" [disabled]="!canRun() || analysis.loading()" (click)="run()">@if (analysis.loading()) { <mat-spinner diameter="18" /> } @else { <mat-icon>functions</mat-icon> } Ejecutar ANOVA</button>
+      <div class="method-note"><span>F</span><p><strong>Lectura completa</strong>Las tablas, supuestos y diagnósticos se preservan tal como los entrega la API.</p></div>
+    </aside>
+    <section class="result-sheet" aria-live="polite">
+      <div class="panel-heading"><div><p class="eyebrow">Resultados y diagnósticos</p><h2>{{ operation().label }}</h2></div><span class="status-stamp">{{ result() ? 'COMPLETO' : 'PENDIENTE' }}</span></div>
+      @if (analysis.error(); as error) { <div class="message error" role="alert"><mat-icon>error_outline</mat-icon>{{ error }}</div> }
+      @if (result(); as current) { <app-result-viewer [value]="current" [fallbackAlpha]="alpha" /> }
+      @else if (!analysis.loading()) { <div class="blank-result"><span>F</span><p>Define respuesta y factores para descomponer la variación.</p></div> }
+      @if (plotData(); as traces) { <div class="anova-plot"><app-plotly-chart [data]="traces" [layout]="plotLayout()" ariaLabel="Gráfico de efectos ANOVA" /></div> }
+    </section>
+  </div>
+} @else {
+  <section class="empty-state"><mat-icon>functions</mat-icon><h2>ANOVA necesita una muestra</h2><p>Carga datos antes de definir el diseño experimental.</p><a mat-flat-button class="primary-action" routerLink="/">Ir a carga</a></section>
+}

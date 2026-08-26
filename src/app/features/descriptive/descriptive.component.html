@@ -1,0 +1,52 @@
+<section class="page-heading split-heading">
+  <div><p class="eyebrow">Estadística descriptiva</p><h1>Retrato numérico</h1></div>
+  <p class="lede">Resume posición, dispersión y distribución sin perder de vista la calidad de la muestra.</p>
+</section>
+
+@if (data.dataset(); as dataset) {
+  <div class="analysis-layout">
+    <aside class="control-sheet">
+      <p class="eyebrow">Parámetros</p><h2>Configura el resumen</h2>
+      <div class="mode-switch compact" role="radiogroup" aria-label="Tipo de resumen">
+        <button type="button" [class.active]="mode() === 'summary'" (click)="mode.set('summary'); result.set(null)">Resumen</button>
+        <button type="button" [class.active]="mode() === 'frequencies'" (click)="mode.set('frequencies'); result.set(null)">Frecuencias</button>
+      </div>
+      @if (mode() === 'summary') {
+        <mat-form-field appearance="outline">
+          <mat-label>Variables</mat-label>
+          <mat-select [(ngModel)]="selectedColumns" multiple>
+            @for (column of dataset.columns; track column.name) { <mat-option [value]="column.name">{{ column.name }} · {{ column.type }}</mat-option> }
+          </mat-select>
+          <mat-hint>Sin selección: todas las variables</mat-hint>
+        </mat-form-field>
+      } @else {
+        <mat-form-field appearance="outline">
+          <mat-label>Variable</mat-label>
+          <mat-select [(ngModel)]="frequencyColumn">
+            @for (column of dataset.columns; track column.name) { <mat-option [value]="column.name">{{ column.name }} · {{ column.type }}</mat-option> }
+          </mat-select>
+          <mat-hint>Selecciona una variable</mat-hint>
+        </mat-form-field>
+      }
+      <button mat-flat-button class="primary-action full" type="button" [disabled]="analysis.loading() || (mode() === 'frequencies' && !frequencyColumn)" (click)="run()">
+        @if (analysis.loading()) { <mat-spinner diameter="18" /> } @else { <mat-icon>calculate</mat-icon> }
+        Calcular
+      </button>
+      <div class="method-note"><span>n</span><p><strong>{{ dataset.row_count }} observaciones</strong>Dataset: {{ dataset.name }}</p></div>
+    </aside>
+
+    <section class="result-sheet" aria-live="polite">
+      <div class="panel-heading"><div><p class="eyebrow">Salida</p><h2>{{ mode() === 'summary' ? 'Estadísticos descriptivos' : 'Tabla de frecuencias' }}</h2></div><span class="status-stamp">{{ result() ? 'CALCULADO' : 'PENDIENTE' }}</span></div>
+      @if (analysis.error(); as error) { <div class="message error" role="alert"><mat-icon>error_outline</mat-icon>{{ error }}</div> }
+      @if (result()) {
+        <div class="table-scroll result-table"><table><thead><tr>@for (header of headers(); track header) { <th>{{ header }}</th> }</tr></thead>
+          <tbody>@for (row of resultRows(); track $index) { <tr>@for (header of headers(); track header) { <td>{{ display(row[header]) }}</td> }</tr> }</tbody>
+        </table></div>
+      } @else if (!analysis.loading()) {
+        <div class="blank-result"><span>Σ</span><p>Elige variables y calcula para registrar el primer resultado.</p></div>
+      }
+    </section>
+  </div>
+} @else {
+  <section class="empty-state"><mat-icon>functions</mat-icon><h2>Falta la muestra</h2><p>Primero carga datos para calcular sus estadísticos.</p><a mat-flat-button class="primary-action" routerLink="/">Ir a carga</a></section>
+}

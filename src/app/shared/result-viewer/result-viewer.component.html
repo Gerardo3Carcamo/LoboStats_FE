@@ -1,0 +1,18 @@
+<div class="result-summary">
+  @if (pValue() !== null) {
+    <div class="result-chip"><span>p-value</span><strong>{{ display(pValue()) }}</strong></div>
+  }
+  <div class="result-chip"><span>α</span><strong>{{ alpha() }}</strong></div>
+</div>
+<div class="recursive-result" role="table" aria-label="Resultados estadísticos">
+  @for (entry of entries(); track $index) {
+    <div class="result-entry" role="row" [class.group-heading]="entry.value === null" [style.--depth]="entry.depth">
+      <span role="rowheader">{{ label(entry.label) }}</span>
+      @if (entry.value !== null) { <strong role="cell">{{ display(entry.value) }}</strong> }
+    </div>
+  }
+</div>
+<div class="interpretation" [class.significant]="significant()">
+  <span class="decision-mark" aria-hidden="true">{{ significant() ? '≠' : '≈' }}</span>
+  <div><p class="eyebrow">Interpretación</p><p>{{ response().interpretation }}</p></div>
+</div>

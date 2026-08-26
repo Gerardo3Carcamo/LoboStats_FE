@@ -1,0 +1,37 @@
+<section class="page-heading split-heading">
+  <div><p class="eyebrow">Estadística</p><h1>Del supuesto a la evidencia</h1></div>
+  <p class="lede">Descriptiva avanzada, supuestos, pruebas no paramétricas, proporciones, correlación y potencia en un flujo progresivo.</p>
+</section>
+
+@if (data.dataset(); as dataset) {
+  <div class="category-tabs" role="tablist" aria-label="Familias estadísticas">
+    @for (item of categories; track item.id) {
+      <button type="button" role="tab" [attr.aria-selected]="categoryId() === item.id" [class.active]="categoryId() === item.id" (click)="selectCategory(item.id)">{{ item.label }}</button>
+    }
+  </div>
+  <div class="analysis-layout">
+    <aside class="control-sheet">
+      <p class="eyebrow">Método</p><h2>{{ category().label }}</h2>
+      <mat-form-field appearance="outline"><mat-label>Análisis</mat-label><mat-select [ngModel]="operationId()" (ngModelChange)="selectOperation($event)">@for (item of category().operations; track item.id) { <mat-option [value]="item.id">{{ item.label }}</mat-option> }</mat-select></mat-form-field>
+      <p class="form-description">{{ operation().description }}</p>
+      @for (field of operation().fields; track field.key) {
+        @if (field.hint !== 'hidden' && (field.type === 'variable' || field.type === 'variables')) {
+          <mat-form-field appearance="outline"><mat-label>{{ field.label }}</mat-label><mat-select [(ngModel)]="values[field.key]" [multiple]="field.type === 'variables'">@for (column of dataset.columns; track column.name) { <mat-option [value]="column.name">{{ column.name }} · {{ column.type }}</mat-option> }</mat-select></mat-form-field>
+        } @else if (field.hint !== 'hidden' && field.type === 'choice') {
+          <mat-form-field appearance="outline"><mat-label>{{ field.label }}</mat-label><mat-select [(ngModel)]="values[field.key]">@for (option of field.options ?? []; track $index) { <mat-option [value]="option.value">{{ option.label }}</mat-option> }</mat-select></mat-form-field>
+        } @else if (field.hint !== 'hidden') {
+          <mat-form-field appearance="outline"><mat-label>{{ field.label }}</mat-label><input matInput [type]="field.type === 'number' ? 'number' : 'text'" [(ngModel)]="values[field.key]" /></mat-form-field>
+        }
+      }
+      <button mat-flat-button class="primary-action full" type="button" [disabled]="!canRun() || analysis.loading()" (click)="run()">@if (analysis.loading()) { <mat-spinner diameter="18" /> } @else { <mat-icon>science</mat-icon> } Analizar</button>
+    </aside>
+    <section class="result-sheet" aria-live="polite">
+      <div class="panel-heading"><div><p class="eyebrow">Resultado</p><h2>{{ operation().label }}</h2></div><span class="status-stamp">{{ result() ? 'COMPLETO' : 'PENDIENTE' }}</span></div>
+      @if (analysis.error(); as error) { <div class="message error" role="alert"><mat-icon>error_outline</mat-icon>{{ error }}</div> }
+      @if (result(); as current) { <app-result-viewer [value]="current" [fallbackAlpha]="resultAlpha()" /> }
+      @else if (!analysis.loading()) { <div class="blank-result"><span>Σ</span><p>Elige un método y completa únicamente sus parámetros necesarios.</p></div> }
+    </section>
+  </div>
+} @else {
+  <section class="empty-state"><mat-icon>science</mat-icon><h2>El análisis necesita datos</h2><p>Carga una muestra para habilitar los métodos.</p><a mat-flat-button class="primary-action" routerLink="/">Ir a carga</a></section>
+}

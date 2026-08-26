@@ -1,0 +1,66 @@
+<a class="skip-link" href="#main-content">Saltar al contenido</a>
+<div class="app-shell">
+  <aside class="sidebar" aria-label="Navegación principal">
+    <a class="brand" routerLink="/" aria-label="LoboStats, inicio" data-tour="brand">
+      <span class="brand-mark" aria-hidden="true">L</span>
+      <span><strong>LoboStats</strong><small>análisis estadístico</small></span>
+    </a>
+
+    <nav class="sidebar-nav" aria-label="Secciones de análisis">
+      @for (item of navItems; track item.path) {
+        <a [routerLink]="item.path" routerLinkActive="active"
+           [routerLinkActiveOptions]="{ exact: item.exact }">
+          <mat-icon aria-hidden="true">{{ item.icon }}</mat-icon>
+          <span>{{ item.label }}</span>
+        </a>
+      }
+    </nav>
+
+    <div class="dataset-status" aria-live="polite">
+      <span class="status-dot" [class.ready]="data.hasDataset()"></span>
+      @if (data.dataset(); as dataset) {
+        <div><small>Dataset activo</small><strong>{{ dataset.name }}</strong></div>
+      } @else {
+        <div><small>Sesión lista</small><strong>Sin datos</strong></div>
+      }
+    </div>
+  </aside>
+
+  <div class="workspace">
+    <header class="topbar" data-tour="dataset-status">
+      <a class="mobile-brand" routerLink="/" aria-label="LoboStats, inicio">L</a>
+      <div class="workspace-status">
+        <span class="status-dot" [class.ready]="data.hasDataset()"></span>
+        <div>
+          <strong>{{ data.dataset()?.name ?? 'Espacio de análisis' }}</strong>
+          @if (data.dataset(); as dataset) {
+            <small>{{ dataset.row_count }} filas · {{ dataset.column_count }} variables</small>
+          } @else {
+            <small>Sin una muestra activa</small>
+          }
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <svg class="signal-line" viewBox="0 0 520 64" preserveAspectRatio="none" aria-hidden="true">
+          <path [attr.d]="pulsePath()" />
+        </svg>
+        <button class="tutorial-button" type="button" data-tour="start" (click)="tutorial.start()">
+          <mat-icon aria-hidden="true">school</mat-icon><span>Ver tutorial</span>
+        </button>
+      </div>
+    </header>
+
+    <main id="main-content" tabindex="-1">
+      <router-outlet />
+    </main>
+  </div>
+
+  <nav class="mobile-nav" aria-label="Navegación móvil">
+    @for (item of navItems; track item.path) {
+      <a [routerLink]="item.path" routerLinkActive="active"
+         [routerLinkActiveOptions]="{ exact: item.exact }">
+        <mat-icon aria-hidden="true">{{ item.icon }}</mat-icon><span>{{ item.shortLabel }}</span>
+      </a>
+    }
+  </nav>
+</div>

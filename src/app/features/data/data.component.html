@@ -1,0 +1,42 @@
+<section class="page-heading">
+  <p class="eyebrow">Datos</p><h1>Inspección de la muestra</h1>
+  <p class="lede">Verifica estructura, tipos y ausencias antes de analizar.</p>
+</section>
+
+@if (data.dataset(); as dataset) {
+  <section class="dataset-header">
+    <div><span class="file-glyph">CSV</span><div><p class="eyebrow">Dataset activo</p><h2>{{ dataset.name }}</h2><code>ID {{ dataset.id }}</code></div></div>
+    <button mat-stroked-button class="danger-action" type="button" (click)="remove()"><mat-icon>delete_outline</mat-icon>Eliminar</button>
+  </section>
+
+  <dl class="metrics-strip">
+    <div><dt>Observaciones</dt><dd>{{ dataset.row_count }}</dd></div>
+    <div><dt>Variables</dt><dd>{{ dataset.column_count }}</dd></div>
+    <div><dt>Ausentes</dt><dd>{{ dataset.columns.reduce(totalMissing, 0) }}</dd></div>
+    <div><dt>Vista disponible</dt><dd>{{ dataset.preview.length }}</dd></div>
+  </dl>
+
+  <section class="notebook-panel">
+    <div class="panel-heading"><div><p class="eyebrow">Diccionario</p><h2>Variables detectadas</h2></div><span class="count-label">{{ dataset.columns.length }} columnas</span></div>
+    <div class="metadata-grid">
+      @for (column of dataset.columns; track column.name) {
+        <article class="variable-record">
+          <div><strong>{{ column.name }}</strong><span class="type-tag">{{ column.type }}</span></div>
+          <dl><div><dt>Ausentes</dt><dd>{{ column.missing }}</dd></div><div><dt>Únicos</dt><dd>{{ column.unique }}</dd></div></dl>
+        </article>
+      }
+    </div>
+  </section>
+
+  <section class="notebook-panel data-preview">
+    <div class="panel-heading"><div><p class="eyebrow">Mesa de observación</p><h2>Vista previa</h2></div></div>
+    @if (dataset.preview.length) {
+      <div class="table-scroll"><table><thead><tr><th>#</th>@for (column of dataset.columns; track column.name) { <th>{{ column.name }}</th> }</tr></thead>
+        <tbody>@for (row of pageRows(); track $index) { <tr><th>{{ pageIndex() * pageSize() + $index + 1 }}</th>@for (column of dataset.columns; track column.name) { <td>{{ row[column.name] ?? '—' }}</td> }</tr> }</tbody>
+      </table></div>
+      <mat-paginator [length]="dataset.row_count" [pageSize]="pageSize()" [pageSizeOptions]="[5, 10, 25]" (page)="paginate($event)" aria-label="Paginar vista previa" />
+    } @else { <p class="empty-inline">El servidor no devolvió filas para la vista previa.</p> }
+  </section>
+} @else {
+  <section class="empty-state"><mat-icon>dataset</mat-icon><h2>No hay una muestra activa</h2><p>Carga un CSV o crea una tabla manual para inspeccionar sus datos.</p><a mat-flat-button class="primary-action" routerLink="/">Cargar datos</a></section>
+}

@@ -1,0 +1,30 @@
+<section class="page-heading split-heading">
+  <div><p class="eyebrow">Visualizaciones</p><h1>La forma de los datos</h1></div>
+  <p class="lede">De gráficos rápidos a vistas multivariantes interactivas, sin saturar el espacio de trabajo.</p>
+</section>
+
+@if (data.dataset(); as dataset) {
+  <div class="category-tabs" role="tablist" aria-label="Categorías de gráficos">
+    @for (item of categories; track item) { <button type="button" role="tab" [attr.aria-selected]="category() === item" [class.active]="category() === item" (click)="selectCategory(item)">{{ item }}</button> }
+  </div>
+  <div class="analysis-layout visual-layout">
+    <aside class="control-sheet">
+      <p class="eyebrow">Lienzo</p><h2>{{ category() }}</h2>
+      <mat-form-field appearance="outline"><mat-label>Tipo de gráfico</mat-label><mat-select [ngModel]="kind()" (ngModelChange)="selectKind($event)">@for (chart of available(); track chart.id) { <mat-option [value]="chart.id">{{ chart.label }}</mat-option> }</mat-select></mat-form-field>
+      @for (field of current().fields; track field) {
+        <mat-form-field appearance="outline"><mat-label>{{ labels[field] }}</mat-label><mat-select [(ngModel)]="values[field]" [multiple]="field === 'columns'">@if (field === 'group_column') { <mat-option value="">Sin agrupación</mat-option> }@for (column of dataset.columns; track column.name) { <mat-option [value]="column.name">{{ column.name }} · {{ column.type }}</mat-option> }</mat-select></mat-form-field>
+      }
+      <button mat-flat-button class="primary-action full" type="button" [disabled]="!canRun() || analysis.loading()" (click)="run()">@if (analysis.loading()) { <mat-spinner diameter="18" /> } @else { <mat-icon>auto_graph</mat-icon> } Graficar</button>
+      @if (current().advanced) { <div class="method-note"><span>↗</span><p><strong>Vista interactiva</strong>Plotly se descarga únicamente al mostrar este gráfico.</p></div> }
+    </aside>
+    <section class="result-sheet chart-sheet" aria-live="polite">
+      <div class="panel-heading"><div><p class="eyebrow">Resultado</p><h2>{{ current().label }}</h2></div><span class="status-stamp">{{ chartData() || plotData() ? 'TRAZADO' : 'PENDIENTE' }}</span></div>
+      @if (analysis.error(); as error) { <div class="message error" role="alert"><mat-icon>error_outline</mat-icon>{{ error }}</div> }
+      @if (plotData(); as traces) { <app-plotly-chart [data]="traces" [layout]="plotLayout()" [ariaLabel]="'Gráfico ' + current().label" /> }
+      @else if (chartData(); as currentChart) { <div class="chart-canvas"><canvas baseChart [type]="chartType()" [data]="currentChart" [options]="chartOptions"></canvas></div> }
+      @else if (!analysis.loading()) { <div class="blank-result"><mat-icon>ssid_chart</mat-icon><p>Selecciona las variables para trazar el gráfico.</p></div> }
+    </section>
+  </div>
+} @else {
+  <section class="empty-state"><mat-icon>ssid_chart</mat-icon><h2>No hay datos para dibujar</h2><p>Carga una muestra antes de crear visualizaciones.</p><a mat-flat-button class="primary-action" routerLink="/">Ir a carga</a></section>
+}
