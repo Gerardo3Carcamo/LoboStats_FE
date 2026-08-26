@@ -1,0 +1,25 @@
+<article class="auth-card">
+  <p class="auth-step">Acceso institucional</p>
+  <h2>Continúa tu análisis</h2>
+  <p class="intro">Usa tu correo universitario para entrar a tu espacio de trabajo.</p>
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    @if (verified) { <p class="form-success" role="status">Correo verificado. Ya puedes iniciar sesión.</p> }
+    @if (error()) { <p class="form-error" role="alert">{{ error() }}</p> }
+    <div class="field">
+      <label for="login-email">Correo institucional</label>
+      <input id="login-email" type="email" formControlName="email" autocomplete="username" inputmode="email"
+        [attr.aria-invalid]="form.controls.email.touched && form.controls.email.invalid">
+      @if (form.controls.email.touched && form.controls.email.invalid) { <p class="field-error">Ingresa un correo válido.</p> }
+    </div>
+    <div class="field">
+      <label for="login-password">Contraseña</label>
+      <input id="login-password" type="password" formControlName="password" autocomplete="current-password"
+        [attr.aria-invalid]="form.controls.password.touched && form.controls.password.invalid">
+      @if (form.controls.password.touched && form.controls.password.invalid) { <p class="field-error">Ingresa tu contraseña.</p> }
+    </div>
+    <button class="auth-submit" type="submit" [disabled]="submitting()">
+      {{ submitting() ? 'Verificando…' : 'Iniciar sesión' }}
+    </button>
+  </form>
+  <p class="auth-link">¿Aún no tienes cuenta? <a routerLink="/registro">Crea una</a></p>
+</article>

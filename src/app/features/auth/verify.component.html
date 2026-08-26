@@ -1,0 +1,26 @@
+<article class="auth-card">
+  <p class="auth-step">Verificación</p>
+  <h2>Revisa tu correo</h2>
+  <p class="intro">Escribe el código de 6 dígitos enviado a <strong>{{ email || 'tu correo institucional' }}</strong>.</p>
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    @if (error()) { <p class="form-error" role="alert">{{ error() }}</p> }
+    @if (message()) { <p class="form-success" role="status">{{ message() }}</p> }
+    <div class="field">
+      <label for="verification-code">Código de verificación</label>
+      <input class="code-input" id="verification-code" formControlName="code" autocomplete="one-time-code"
+        inputmode="numeric" maxlength="6" pattern="[0-9]*"
+        [attr.aria-invalid]="form.controls.code.touched && form.controls.code.invalid">
+      @if (form.controls.code.touched && form.controls.code.invalid) { <p class="field-error">Ingresa los 6 dígitos del código.</p> }
+    </div>
+    <button class="auth-submit" type="submit" [disabled]="submitting() || !email">
+      {{ submitting() ? 'Verificando…' : 'Verificar correo' }}
+    </button>
+    <div class="resend-row">
+      <span>¿No recibiste el código?</span>
+      <button class="text-button" type="button" (click)="resend()" [disabled]="resending() || cooldown() > 0 || !email">
+        @if (cooldown()) { Reenviar en {{ cooldown() }} s } @else { {{ resending() ? 'Enviando…' : 'Reenviar código' }} }
+      </button>
+    </div>
+  </form>
+  <p class="auth-link"><a routerLink="/registro">Usar otro correo</a></p>
+</article>

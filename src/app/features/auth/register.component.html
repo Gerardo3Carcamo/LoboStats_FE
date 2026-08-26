@@ -1,0 +1,38 @@
+<article class="auth-card">
+  <p class="auth-step">Nueva cuenta</p>
+  <h2>Crea tu espacio</h2>
+  <p class="intro">Tu cuenta queda vinculada al dominio académico de la UAdeC.</p>
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    @if (error()) { <p class="form-error" role="alert">{{ error() }}</p> }
+    <div class="field">
+      <label for="full-name">Nombre completo</label>
+      <input id="full-name" formControlName="fullName" autocomplete="name"
+        [attr.aria-invalid]="form.controls.fullName.touched && form.controls.fullName.invalid">
+      @if (form.controls.fullName.touched && form.controls.fullName.invalid) { <p class="field-error">Ingresa tu nombre completo.</p> }
+    </div>
+    <div class="field">
+      <label for="register-email">Correo institucional</label>
+      <input id="register-email" type="email" formControlName="email" autocomplete="email" inputmode="email"
+        [attr.aria-invalid]="form.controls.email.touched && form.controls.email.invalid">
+      <p class="hint">Debe terminar exactamente en &#64;uadec.edu.mx.</p>
+      @if (form.controls.email.touched && form.controls.email.invalid) { <p class="field-error">Usa un correo válido &#64;uadec.edu.mx.</p> }
+    </div>
+    <div class="field">
+      <label for="register-password">Contraseña</label>
+      <input id="register-password" type="password" formControlName="password" autocomplete="new-password"
+        [attr.aria-invalid]="form.controls.password.touched && form.controls.password.invalid">
+      <p class="hint">12 caracteres o más, con mayúscula, minúscula y número.</p>
+      @if (form.controls.password.touched && form.controls.password.invalid) { <p class="field-error">La contraseña no cumple los requisitos.</p> }
+    </div>
+    <div class="field">
+      <label for="confirm-password">Confirma la contraseña</label>
+      <input id="confirm-password" type="password" formControlName="passwordConfirmation" autocomplete="new-password"
+        [attr.aria-invalid]="form.controls.passwordConfirmation.touched && form.hasError('passwordsMismatch')">
+      @if (form.controls.passwordConfirmation.touched && form.hasError('passwordsMismatch')) { <p class="field-error">Las contraseñas no coinciden.</p> }
+    </div>
+    <button class="auth-submit" type="submit" [disabled]="submitting()">
+      {{ submitting() ? 'Creando cuenta…' : 'Crear cuenta' }}
+    </button>
+  </form>
+  <p class="auth-link">¿Ya tienes cuenta? <a routerLink="/login">Inicia sesión</a></p>
+</article>

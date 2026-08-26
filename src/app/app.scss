@@ -16,7 +16,15 @@
 .sidebar nav a.active { color: var(--ink); background: #eaf6f5; }
 .sidebar nav mat-icon { color: #7c919d; font-size: 19px; width: 19px; height: 19px; }
 .sidebar nav a.active mat-icon { color: #187a76; }
-.dataset-status { margin-top: auto; padding: 13px; display: flex; gap: 10px; align-items: center; min-width: 0; background: #f7f9fa; border: 1px solid var(--line); border-radius: 11px; }
+.account-block { margin-top: auto; padding: 12px 4px 12px 12px; display: flex; align-items: center; gap: 6px; border-top: 1px solid var(--line); }
+.account-copy { min-width: 0; flex: 1; }
+.account-copy small, .account-copy strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-copy small { color: var(--muted); font-size: .58rem; letter-spacing: .08em; text-transform: uppercase; }
+.account-copy strong { margin-top: 3px; color: var(--ink); font-size: .7rem; }
+.account-block button, .logout-button { width: 34px; height: 34px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 8px; cursor: pointer; color: #71848f; background: transparent; }
+.account-block button:hover, .logout-button:hover { color: #a34136; background: #fff0ed; }
+.account-block mat-icon, .logout-button mat-icon { width: 18px; height: 18px; font-size: 18px; }
+.dataset-status { margin-top: 10px; padding: 13px; display: flex; gap: 10px; align-items: center; min-width: 0; background: #f7f9fa; border: 1px solid var(--line); border-radius: 11px; }
 .dataset-status div { min-width: 0; }
 .dataset-status small, .dataset-status strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dataset-status small { color: var(--muted); font-size: .62rem; text-transform: uppercase; letter-spacing: .07em; }
@@ -37,6 +45,7 @@
 .tutorial-button { display: inline-flex; align-items: center; gap: 7px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 9px; cursor: pointer; color: var(--text); background: white; font-size: .74rem; font-weight: 700; }
 .tutorial-button:hover { border-color: #91bab8; background: #f2f8f7; }
 .tutorial-button mat-icon { width: 18px; height: 18px; color: #287f7b; font-size: 18px; }
+.topbar-user { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: .7rem; }
 main { max-width: 1440px; margin: 0 auto; padding: 36px 44px 72px; }
 .mobile-nav { display: none; }
 .skip-link { position: fixed; z-index: 100; top: 8px; left: 8px; transform: translateY(-150%); background: var(--cyan); color: var(--ink); padding: 10px 16px; }
@@ -49,7 +58,7 @@ main { max-width: 1440px; margin: 0 auto; padding: 36px 44px 72px; }
   .workspace-status { flex: 1; }
   .workspace-status > .status-dot { display: none; }
   .workspace-status strong { font-size: .72rem; }
-  .signal-line, .tutorial-button span { display: none; }
+  .signal-line, .tutorial-button span, .topbar-user { display: none; }
   .tutorial-button { width: 36px; height: 36px; justify-content: center; padding: 0; }
   main { padding: 26px 18px 94px; }
   .mobile-nav { position: fixed; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); inset: auto 0 0; z-index: 30; background: rgba(255,255,255,.97); border-top: 1px solid var(--line); padding: 7px 2px max(7px, env(safe-area-inset-bottom)); backdrop-filter: blur(14px); }

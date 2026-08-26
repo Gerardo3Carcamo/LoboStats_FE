@@ -1,6 +1,7 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, throwError } from 'rxjs';
+import { API_BASE_URL } from '../config/api.config';
 
 export interface DistributionResponse {
   distribution: string;
@@ -13,7 +14,7 @@ export interface DistributionResponse {
 @Injectable({ providedIn: 'root' })
 export class DistributionService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = '/api/distributions';
+  private readonly baseUrl = `${API_BASE_URL}/distributions`;
 
   request(operation: string, payload: Record<string, unknown>): Observable<DistributionResponse> {
     return this.http.post<DistributionResponse>(`${this.baseUrl}/${operation}`, payload).pipe(

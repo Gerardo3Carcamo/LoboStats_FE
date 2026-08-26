@@ -2,11 +2,12 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable, catchError, finalize, map, tap, throwError } from 'rxjs';
 import { Dataset, ManualDataset } from '../models/dataset.model';
+import { API_BASE_URL } from '../config/api.config';
 
 @Injectable({ providedIn: 'root' })
 export class DataService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = '/api';
+  private readonly baseUrl = API_BASE_URL;
   private readonly datasetState = signal<Dataset | null>(null);
 
   readonly dataset = this.datasetState.asReadonly();

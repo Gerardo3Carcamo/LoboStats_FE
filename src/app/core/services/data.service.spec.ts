@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { DataService } from './data.service';
+import { API_BASE_URL } from '../config/api.config';
 
 describe('DataService', () => {
   let service: DataService;
@@ -20,7 +21,7 @@ describe('DataService', () => {
     let receivedName = '';
 
     service.upload(file).subscribe((dataset) => receivedName = dataset.name);
-    const request = http.expectOne('/api/data/upload');
+    const request = http.expectOne(`${API_BASE_URL}/data/upload`);
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toBeInstanceOf(FormData);
     expect((request.request.body as FormData).get('file')).toBe(file);
@@ -33,7 +34,7 @@ describe('DataService', () => {
 
   it('accepts dataset fields at the response root', () => {
     service.get('root-1').subscribe();
-    const request = http.expectOne((candidate) => candidate.url === '/api/data/root-1');
+    const request = http.expectOne((candidate) => candidate.url === `${API_BASE_URL}/data/root-1`);
     expect(request.request.params.get('page')).toBe('1');
     expect(request.request.params.get('page_size')).toBe('10');
     request.flush({
@@ -48,13 +49,13 @@ describe('DataService', () => {
 
   it('exposes a useful connection error', () => {
     service.get('missing').subscribe({ error: () => undefined });
-    http.expectOne((candidate) => candidate.url === '/api/data/missing').error(new ProgressEvent('network'));
+    http.expectOne((candidate) => candidate.url === `${API_BASE_URL}/data/missing`).error(new ProgressEvent('network'));
     expect(service.error()).toContain('No se pudo conectar');
   });
 
   it('normalizes the backend MVP response', () => {
     service.get('backend-1', 2, 25).subscribe();
-    const request = http.expectOne((candidate) => candidate.url === '/api/data/backend-1');
+    const request = http.expectOne((candidate) => candidate.url === `${API_BASE_URL}/data/backend-1`);
     expect(request.request.params.get('page')).toBe('2');
     expect(request.request.params.get('page_size')).toBe('25');
     request.flush({

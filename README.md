@@ -14,7 +14,7 @@ npm install
 npm start
 ```
 
-La aplicación abre en `http://localhost:4200`. El servidor de desarrollo redirige `/api` hacia `http://localhost:5000` mediante `proxy.conf.json`.
+La aplicación abre en `http://localhost:4200` y consume la API publicada en `https://lobostats-api.arechsolutions.com/api`. La URL está centralizada en `src/app/core/config/api.config.ts`.
 
 ## Funcionalidad
 
@@ -28,6 +28,8 @@ La aplicación abre en `http://localhost:4200`. El servidor de desarrollo rediri
 - Resultados genéricos adaptados desde `{ results, interpretation, alpha? }`, con tablas jerárquicas, p-value, supuestos y estados de carga/error.
 - Estado del dataset en un servicio basado en signals.
 - Tutorial guiado y responsive con Driver.js, disponible desde **Ver tutorial** en la barra superior.
+- Registro institucional, verificación por código e inicio/cierre de sesión con rutas privadas.
+- Sesión mediante cookies HttpOnly y protección CSRF; el frontend no almacena tokens.
 
 ## Verificación
 
@@ -50,4 +52,6 @@ docker run --rm -p 4200:80 lobostats-web
 
 ## API
 
-El frontend usa rutas relativas con base `/api`. Los módulos consumen `basic-stats`, `variance`, `nonparametric`, `proportion`, `correlation`, `power`, `anova`, `charts` y `distributions`. Los datasets cargados se mantienen en memoria durante la sesión del navegador; no se implementa autenticación ni persistencia local.
+El frontend usa `https://lobostats-api.arechsolutions.com/api`. Autenticación consume `/auth/register`, `verify`, `resend-code`, `login`, `refresh`, `refresh-csrf`, `logout` y `me`. Todas las solicitudes incluyen credenciales. Los JWT permanecen en cookies HttpOnly; únicamente los valores CSRF, que no conceden acceso por sí solos, se conservan en `sessionStorage` y se envían en `X-CSRF-TOKEN` para métodos mutables.
+
+Las rutas públicas son `/login`, `/registro` y `/verificar`. El resto requiere una sesión válida y conserva la URL solicitada para continuar después del acceso.

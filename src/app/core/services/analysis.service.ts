@@ -2,11 +2,12 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { Observable, catchError, finalize, throwError } from 'rxjs';
 import { ApiResult } from '../models/dataset.model';
+import { API_BASE_URL } from '../config/api.config';
 
 @Injectable({ providedIn: 'root' })
 export class AnalysisService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = '/api';
+  private readonly baseUrl = API_BASE_URL;
 
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);

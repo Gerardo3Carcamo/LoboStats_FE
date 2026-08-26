@@ -1,5 +1,8 @@
-<a class="skip-link" href="#main-content">Saltar al contenido</a>
-<div class="app-shell">
+@if (isAuthRoute()) {
+  <router-outlet />
+} @else {
+  <a class="skip-link" href="#main-content">Saltar al contenido</a>
+  <div class="app-shell">
   <aside class="sidebar" aria-label="Navegación principal">
     <a class="brand" routerLink="/" aria-label="LoboStats, inicio" data-tour="brand">
       <span class="brand-mark" aria-hidden="true">L</span>
@@ -15,6 +18,13 @@
         </a>
       }
     </nav>
+
+    <div class="account-block">
+      @if (auth.user(); as user) {
+        <div class="account-copy"><small>Sesión</small><strong>{{ user.full_name || user.email }}</strong></div>
+        <button type="button" (click)="logout()" aria-label="Cerrar sesión"><mat-icon aria-hidden="true">logout</mat-icon></button>
+      }
+    </div>
 
     <div class="dataset-status" aria-live="polite">
       <span class="status-dot" [class.ready]="data.hasDataset()"></span>
@@ -47,6 +57,12 @@
         <button class="tutorial-button" type="button" data-tour="start" (click)="tutorial.start()">
           <mat-icon aria-hidden="true">school</mat-icon><span>Ver tutorial</span>
         </button>
+        @if (auth.user(); as user) {
+          <span class="topbar-user" [title]="user.email">{{ user.full_name || user.email }}</span>
+          <button class="logout-button" type="button" (click)="logout()" aria-label="Cerrar sesión">
+            <mat-icon aria-hidden="true">logout</mat-icon>
+          </button>
+        }
       </div>
     </header>
 
@@ -63,4 +79,5 @@
       </a>
     }
   </nav>
-</div>
+  </div>
+}
