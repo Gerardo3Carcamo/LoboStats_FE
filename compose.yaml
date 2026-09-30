@@ -1,0 +1,15 @@
+services:
+  web:
+    build: .
+    container_name: lobostats-web
+    restart: unless-stopped
+    environment:
+      API_UPSTREAM: http://lobostats-api:8000
+    ports:
+      - "8080:80"
+    networks:
+      - lobostats
+
+networks:
+  lobostats:
+    external: true

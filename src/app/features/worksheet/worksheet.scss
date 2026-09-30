@@ -1,0 +1,371 @@
+:host {
+  display: block;
+}
+
+.workspace-intro {
+  align-items: end;
+  display: flex;
+  justify-content: space-between;
+  padding: 28px 0 18px;
+}
+
+.section-label {
+  color: var(--muted);
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  margin: 0 0 7px;
+  text-transform: uppercase;
+}
+
+.dataset-name {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 600;
+  max-width: 430px;
+  padding: 2px 0 4px;
+  width: 46vw;
+
+  &:focus-visible {
+    border-color: var(--green);
+    outline: 2px solid var(--focus);
+    outline-offset: 4px;
+  }
+}
+
+.dataset-meta {
+  color: var(--muted);
+  display: flex;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  gap: 20px;
+
+  strong {
+    color: var(--ink);
+    font-size: 0.78rem;
+  }
+}
+
+.workspace-grid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: minmax(500px, 1fr) 270px;
+}
+
+.sheet-card,
+.context-panel {
+  background: #fffdf8;
+  border: 1px solid var(--line);
+  box-shadow: 0 16px 45px rgb(41 49 40 / 6%);
+}
+
+.sheet-card {
+  min-width: 0;
+}
+
+.toolbar {
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  min-height: 62px;
+  padding: 0 14px;
+}
+
+.toolbar-actions {
+  align-items: center;
+  display: flex;
+  gap: 7px;
+}
+
+.secondary-actions {
+  display: flex;
+  gap: 7px;
+}
+
+.button {
+  align-items: center;
+  background: #f8f6ef;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 12px;
+  position: relative;
+
+  &:focus-visible,
+  &:focus-within {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  &:hover {
+    border-color: #a9ada5;
+  }
+
+  &:disabled {
+    cursor: wait;
+    opacity: 0.65;
+  }
+
+  &.disabled {
+    cursor: wait;
+    opacity: 0.65;
+  }
+
+  &.primary {
+    background: var(--green);
+    border-color: var(--green);
+    color: white;
+  }
+
+  &.quiet {
+    background: transparent;
+    border-color: transparent;
+    color: var(--green);
+  }
+
+  &.save {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: white;
+    min-width: 82px;
+    justify-content: center;
+  }
+}
+
+.file-input {
+  block-size: 1px;
+  clip-path: inset(50%);
+  inline-size: 1px;
+  inset: 50% auto auto 50%;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+}
+
+.data-grid {
+  display: block;
+  height: clamp(410px, 58vh, 650px);
+  width: 100%;
+}
+
+:host ::ng-deep .row-number {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  text-align: center;
+}
+
+.sheet-status {
+  align-items: center;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  display: flex;
+  font-size: 0.75rem;
+  min-height: 39px;
+  padding: 0 14px;
+}
+
+.status-indicator {
+  background: var(--green);
+  border-radius: 50%;
+  height: 6px;
+  margin-right: 8px;
+  width: 6px;
+}
+
+.sheet-status[data-kind='error'] {
+  color: var(--danger);
+
+  .status-indicator {
+    background: var(--danger);
+  }
+}
+
+.sheet-status[data-kind='success'] .status-indicator {
+  background: var(--success);
+}
+
+.format-hint {
+  font-family: var(--font-mono);
+  margin-left: auto;
+}
+
+.context-panel {
+  overflow: hidden;
+  padding: 25px;
+  position: relative;
+
+  h2 {
+    font-family: var(--font-display);
+    font-size: 1.55rem;
+    line-height: 1.12;
+    margin: 0 0 15px;
+    max-width: 200px;
+  }
+
+  > p:not(.section-label) {
+    color: var(--muted);
+    font-size: 0.85rem;
+    line-height: 1.65;
+    margin: 0;
+  }
+}
+
+.context-number {
+  color: #f1eee4;
+  font-family: var(--font-display);
+  font-size: 6rem;
+  font-weight: 800;
+  line-height: 1;
+  position: absolute;
+  right: -7px;
+  top: -14px;
+}
+
+.tip {
+  align-items: flex-start;
+  background: var(--green-soft);
+  border-left: 3px solid var(--green);
+  display: flex;
+  gap: 10px;
+  margin-top: 28px;
+  padding: 14px;
+
+  > span {
+    align-items: center;
+    border: 1px solid var(--green);
+    border-radius: 50%;
+    color: var(--green);
+    display: flex;
+    flex: 0 0 auto;
+    font-family: var(--font-display);
+    font-size: 0.68rem;
+    font-weight: 700;
+    height: 19px;
+    justify-content: center;
+    width: 19px;
+  }
+
+  p,
+  strong {
+    display: block;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  strong {
+    color: var(--ink);
+    margin-bottom: 2px;
+  }
+}
+
+.next-step {
+  border-top: 1px solid var(--line);
+  bottom: 25px;
+  left: 25px;
+  padding-top: 18px;
+  position: absolute;
+  right: 25px;
+
+  small,
+  strong,
+  span {
+    display: block;
+  }
+
+  small {
+    color: var(--muted);
+    font-size: 0.7rem;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+  }
+
+  strong {
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    margin: 5px 0;
+  }
+
+  span {
+    color: var(--green);
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+}
+
+@media (max-width: 1100px) {
+  .workspace-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .context-panel {
+    min-height: 0;
+  }
+
+  .next-step {
+    margin-top: 28px;
+    position: static;
+  }
+}
+
+@media (max-width: 600px) {
+  .workspace-intro {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+    padding-top: 20px;
+  }
+
+  .dataset-name {
+    width: 86vw;
+  }
+
+  .toolbar {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .toolbar-actions {
+    flex-wrap: wrap;
+  }
+
+  .secondary-actions {
+    flex-wrap: wrap;
+  }
+
+  .button {
+    padding: 0 9px;
+  }
+
+  .sheet-status {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 4px 0;
+    padding-block: 10px;
+  }
+
+  .format-hint {
+    flex-basis: 100%;
+    margin-left: 14px;
+  }
+
+  .data-grid {
+    height: 58vh;
+  }
+}
