@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { AgGridAngular } from 'ag-grid-angular';
 import {
@@ -13,6 +13,7 @@ import {
 } from 'ag-grid-community';
 
 import { DatasetApi } from '../../core/services/dataset-api';
+import { AgentApiService } from '../../core/services/agent-api';
 import { WorkspaceStore } from '../../core/services/workspace-store';
 import { CellValue, DatasetColumn } from '../../models/dataset';
 import {
@@ -55,6 +56,7 @@ const DELIMITERS: Record<ImportDelimiter, string> = {
 export class Worksheet {
   protected readonly store = inject(WorkspaceStore);
   private readonly datasetApi = inject(DatasetApi);
+  private readonly agentApi = inject(AgentApiService);
   private readonly importPreview = viewChild<ImportPreviewDialog>('importPreview');
   protected readonly status = signal('Área de trabajo lista');
   protected readonly statusKind = signal<StatusKind>('info');
@@ -67,6 +69,20 @@ export class Worksheet {
   protected readonly saving = signal(false);
   protected readonly importing = signal(false);
   protected readonly importDraft = signal<ImportDraft | null>(null);
+  protected readonly agentBusy = this.agentApi.busy;
+  private readonly agentStatusEffect = effect(() => {
+    const state = this.agentApi.state();
+    if (state.phase === 'idle') return;
+    const kind: StatusKind =
+      state.phase === 'verified'
+        ? 'success'
+        : state.phase === 'cancelled'
+          ? 'info'
+          : ['unavailable', 'incompatible', 'error'].includes(state.phase)
+            ? 'error'
+            : 'info';
+    this.setStatus(kind, state.message);
+  });
   protected readonly localeText = {
     noRowsToShow: 'No hay datos para mostrar',
     ariaInputEditor: 'Editor de celda',
@@ -129,6 +145,34 @@ export class Worksheet {
 
   protected gridReady(event: GridReadyEvent): void {
     event.api.setGridAriaProperty('label', 'Datos del conjunto activo');
+  }
+
+  protected async handleAgentAction(event: Event): Promise<void> {
+    if (this.agentBusy()) {
+      await this.agentApi.cancel();
+      return;
+    }
+    await this.connectAgent(event.currentTarget as HTMLElement);
+  }
+
+  private async connectAgent(trigger: HTMLElement): Promise<void> {
+    const popup = this.openAgentPopup();
+    if (!popup) {
+      this.setStatus(
+        'error',
+        'El navegador bloqueó la ventana del agente. Permite ventanas emergentes e inténtalo de nuevo',
+      );
+      return;
+    }
+
+    try {
+      await this.agentApi.pair((url) => popup.location.replace(url));
+      popup.close();
+    } catch {
+      popup.close();
+    } finally {
+      this.getWindow()?.requestAnimationFrame(() => trigger.focus());
+    }
   }
 
   protected async importFile(event: Event): Promise<void> {
@@ -441,6 +485,26 @@ export class Worksheet {
 
   private getWindow(): Window | null {
     return typeof window === 'undefined' ? null : window;
+  }
+
+  private openAgentPopup(): Window | null {
+    let popup: Window | null | undefined;
+    try {
+      popup = this.getWindow()?.open(
+        'about:blank',
+        `lobostats-agent-${crypto.randomUUID()}`,
+        'popup,width=720,height=720',
+      );
+      if (!popup) return null;
+
+      popup.opener = null;
+      popup.document.title = 'Conectando con LoboStats Agent';
+      popup.document.body.textContent = 'Conectando con LoboStats Agent...';
+      return popup;
+    } catch {
+      popup?.close();
+      return null;
+    }
   }
 
   private parseValue(params: ValueParserParams, column: DatasetColumn): CellValue {

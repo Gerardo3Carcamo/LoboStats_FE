@@ -1,11 +1,12 @@
 import type { DriveStep } from 'driver.js';
 
-export const WORKSHEET_TOUR_REVISION = '2026.09.2';
+export const WORKSHEET_TOUR_REVISION = '2026.09.3';
 
 export const WORKSHEET_TOUR_TARGETS = {
   datasetName: 'dataset-name',
   importData: 'import-data',
   rowActions: 'row-actions',
+  localAgent: 'local-agent',
   dataGrid: 'data-grid',
   saveData: 'save-data',
   status: 'workspace-status',
@@ -38,11 +39,21 @@ export const WORKSHEET_TOUR_STEPS: DriveStep[] = [
   {
     element: target(WORKSHEET_TOUR_TARGETS.rowActions),
     popover: {
-      title: 'Completa la hoja',
+      title: 'Pega una tabla',
       description:
-        'También puedes pegar una tabla desde el portapapeles o agregar filas para capturar datos manualmente.',
+        'Copia filas y columnas desde otra aplicación para revisarlas antes de reemplazar la hoja actual.',
       side: 'bottom',
       align: 'start',
+    },
+  },
+  {
+    element: target(WORKSHEET_TOUR_TARGETS.localAgent),
+    popover: {
+      title: 'Verifica el agente local',
+      description:
+        'Comprueba y empareja temporalmente LoboStats Agent sin persistir el token fuera de memoria.',
+      side: 'bottom',
+      align: 'center',
     },
   },
   {

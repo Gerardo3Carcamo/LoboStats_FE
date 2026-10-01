@@ -136,6 +136,11 @@
     color: var(--green);
   }
 
+  &.agent-button {
+    background: #fbf4df;
+    border-color: #8c6b1f;
+  }
+
   &.save {
     background: var(--ink);
     border-color: var(--ink);
@@ -143,6 +148,12 @@
     min-width: 82px;
     justify-content: center;
   }
+}
+
+.agent-mark {
+  color: #765b18;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
 }
 
 .file-input {

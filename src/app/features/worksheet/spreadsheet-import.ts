@@ -204,7 +204,11 @@ function parseNumericValue(value: string, decimalSeparator?: DecimalSeparator): 
     return null;
   }
 
-  const parsed = Number(decimalSeparator === ',' ? trimmed.replace(',', '.') : trimmed);
+  const normalized =
+    decimalSeparator === ',' || (!decimalSeparator && trimmed.includes(','))
+      ? trimmed.replace(',', '.')
+      : trimmed;
+  const parsed = Number(normalized);
   if (!Number.isFinite(parsed)) return null;
   if (Number.isInteger(parsed) && !Number.isSafeInteger(parsed)) return null;
   return parsed;

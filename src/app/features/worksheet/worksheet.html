@@ -42,14 +42,25 @@
           />
           <span aria-hidden="true">+</span> {{ importing() ? 'Leyendo...' : 'Importar datos' }}
         </label>
-        <span class="secondary-actions" data-tour="row-actions">
+        <span class="secondary-actions">
           <button
             class="button"
             type="button"
+            data-tour="row-actions"
             [disabled]="importing()"
             (click)="pasteFromClipboard($event)"
           >
             Pegar tabla
+          </button>
+          <button
+            class="button agent-button"
+            type="button"
+            data-tour="local-agent"
+            [attr.aria-busy]="agentBusy()"
+            (click)="handleAgentAction($event)"
+          >
+            <span class="agent-mark" aria-hidden="true">DB</span>
+            {{ agentBusy() ? 'Cancelar conexión' : 'Comprobar agente' }}
           </button>
           <button class="button quiet" type="button" (click)="addRow()">Agregar fila</button>
         </span>
@@ -83,7 +94,7 @@
     <footer class="sheet-status" data-tour="workspace-status" [attr.data-kind]="statusKind()">
       <span class="status-indicator" aria-hidden="true"></span>
       <span>{{ status() }}</span>
-      <span id="import-formats" class="format-hint">CSV, TXT, XLSX o portapapeles</span>
+      <span id="import-formats" class="format-hint">Archivo, portapapeles o agente local</span>
     </footer>
     <div class="sr-only" role="status" aria-live="polite" aria-atomic="true">
       {{ politeStatus() }}

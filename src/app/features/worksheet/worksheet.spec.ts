@@ -15,7 +15,7 @@ describe('Worksheet tour targets', () => {
     }).compileComponents();
 
     fixture = TestBed.createComponent(Worksheet);
-    fixture.detectChanges();
+    fixture.autoDetectChanges();
   });
 
   it('renders every target required by the guided tour', () => {
@@ -45,6 +45,7 @@ describe('Worksheet tour targets', () => {
     input.dispatchEvent(new Event('change'));
 
     await fixture.whenStable();
+    fixture.detectChanges();
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     fixture.detectChanges();
 

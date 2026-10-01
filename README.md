@@ -43,6 +43,11 @@ local versionado, pero no comparte codigo ni dependencias mediante rutas
 relativas. Durante el desarrollo el agente escucha exclusivamente en
 `http://127.0.0.1:43127`.
 
+La hoja de trabajo permite comprobar y emparejar el agente local. El bearer
+token vive solo en memoria y se elimina al completar, cancelar o fallar la
+sesion. La UI local ya puede probar MySQL y mostrar tablas y vistas; selección
+de columnas, filtros y transferencia aún no están disponibles.
+
 ## Produccion
 
 Los dos contenedores utilizan una red Docker externa compartida:
