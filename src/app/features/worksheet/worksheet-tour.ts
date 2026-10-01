@@ -1,6 +1,6 @@
 import type { DriveStep } from 'driver.js';
 
-export const WORKSHEET_TOUR_REVISION = '2026.09.3';
+export const WORKSHEET_TOUR_REVISION = '2026.10.1';
 
 export const WORKSHEET_TOUR_TARGETS = {
   datasetName: 'dataset-name',
@@ -51,7 +51,7 @@ export const WORKSHEET_TOUR_STEPS: DriveStep[] = [
     popover: {
       title: 'Verifica el agente local',
       description:
-        'Comprueba y empareja temporalmente LoboStats Agent sin persistir el token fuera de memoria.',
+        'Empareja el agente local. Con la versión actualizada puedes seleccionar datos MySQL y revisar una vista previa sin persistir tokens.',
       side: 'bottom',
       align: 'center',
     },

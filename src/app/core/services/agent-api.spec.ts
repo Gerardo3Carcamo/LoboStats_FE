@@ -20,8 +20,8 @@ describe('AgentApiService', () => {
           return jsonResponse({
             status: 'ok',
             service: 'LoboStats Agent',
-            version: '0.1.0',
-            protocolVersion: '2',
+            version: '0.3.0',
+            protocolVersion: '3',
           });
         }
         if (url.endsWith('/v1/import-sessions') && init?.method === 'POST') {
@@ -64,7 +64,7 @@ describe('AgentApiService', () => {
     expect(service.state()).toEqual({
       phase: 'verified',
       message: 'LoboStats Agent fue verificado correctamente',
-      agentVersion: '0.1.0',
+      agentVersion: '0.3.0',
     });
     const deleteCall = fetchAgent.calls.allArgs().find(([, init]) => init?.method === 'DELETE');
     const deleteHeaders = deleteCall?.[1]?.headers as Record<string, string>;
@@ -79,7 +79,7 @@ describe('AgentApiService', () => {
         status: 'ok',
         service: 'LoboStats Agent',
         version: '0.1.0',
-        protocolVersion: '3',
+        protocolVersion: '1',
       }),
     );
     TestBed.configureTestingModule({ providers: [{ provide: AGENT_FETCH, useValue: fetchAgent }] });
@@ -105,23 +105,105 @@ describe('AgentApiService', () => {
     expect(service.state().message).not.toContain('Failed to fetch');
   });
 
-  it('keeps cancellation as the final state when an active request is aborted', async () => {
-    const fetchAgent = jasmine.createSpy('fetchAgent').and.callFake(
-      (_input: RequestInfo | URL, init?: RequestInit) =>
-        new Promise<Response>((_resolve, reject) => {
-          init?.signal?.addEventListener('abort', () => {
-            reject(new DOMException('Aborted', 'AbortError'));
+  it('rejects protocol 3 states reported by a protocol 2 agent', async () => {
+    const fetchAgent = jasmine
+      .createSpy('fetchAgent')
+      .and.callFake(async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+        const url = String(input);
+        if (url.endsWith('/v1/status')) {
+          return jsonResponse({
+            status: 'ok',
+            service: 'LoboStats Agent',
+            version: '0.2.0',
+            protocolVersion: '2',
           });
-        }),
-    );
+        }
+        if (url.endsWith('/v1/import-sessions') && init?.method === 'POST') {
+          return jsonResponse(
+            {
+              id: SESSION_ID,
+              requestId: REQUEST_ID,
+              origin: 'http://localhost:4200',
+              token: SESSION_TOKEN,
+              status: 'waiting_for_agent_ui',
+              createdAt: new Date().toISOString(),
+              expiresAt: new Date(Date.now() + 60_000).toISOString(),
+              uiUrl: `${BASE_URL}/ui/#session=${SESSION_ID}&claim=${CLAIM_TOKEN}`,
+            },
+            201,
+          );
+        }
+        if (url.endsWith(`/v1/import-sessions/${SESSION_ID}`) && init?.method === 'GET') {
+          return jsonResponse({
+            id: SESSION_ID,
+            requestId: REQUEST_ID,
+            origin: 'http://localhost:4200',
+            status: 'mysql_columns_ready',
+            createdAt: new Date().toISOString(),
+            expiresAt: new Date(Date.now() + 60_000).toISOString(),
+          });
+        }
+        return new Response(null, { status: 204 });
+      });
     TestBed.configureTestingModule({ providers: [{ provide: AGENT_FETCH, useValue: fetchAgent }] });
     const service = TestBed.inject(AgentApiService);
 
-    const pairing = service.pair(() => undefined);
-    await service.cancel();
+    await expectAsync(service.pair(() => undefined)).toBeRejected();
+
+    expect(service.state().phase).toBe('incompatible');
+  });
+
+  it('keeps cancellation final and deletes a session created with protocol 2', async () => {
+    const fetchAgent = jasmine
+      .createSpy('fetchAgent')
+      .and.callFake(async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+        const url = String(input);
+        if (url.endsWith('/v1/status')) {
+          return jsonResponse({
+            status: 'ok',
+            service: 'LoboStats Agent',
+            version: '0.2.0',
+            protocolVersion: '2',
+          });
+        }
+        if (url.endsWith('/v1/import-sessions') && init?.method === 'POST') {
+          return jsonResponse(
+            {
+              id: SESSION_ID,
+              requestId: REQUEST_ID,
+              origin: 'http://localhost:4200',
+              token: SESSION_TOKEN,
+              status: 'waiting_for_agent_ui',
+              createdAt: new Date().toISOString(),
+              expiresAt: new Date(Date.now() + 60_000).toISOString(),
+              uiUrl: `${BASE_URL}/ui/#session=${SESSION_ID}&claim=${CLAIM_TOKEN}`,
+            },
+            201,
+          );
+        }
+        if (url.endsWith(`/v1/import-sessions/${SESSION_ID}`) && init?.method === 'DELETE') {
+          return new Response(null, { status: 204 });
+        }
+        return new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => {
+            reject(new DOMException('Aborted', 'AbortError'));
+          });
+        });
+      });
+    TestBed.configureTestingModule({ providers: [{ provide: AGENT_FETCH, useValue: fetchAgent }] });
+    const service = TestBed.inject(AgentApiService);
+    let cancellation: Promise<void> | undefined;
+
+    const pairing = service.pair(() => {
+      cancellation = service.cancel();
+    });
     await expectAsync(pairing).toBeRejected();
+    await cancellation;
 
     expect(service.state().phase).toBe('cancelled');
+    const deleteCall = fetchAgent.calls.allArgs().find(([, init]) => init?.method === 'DELETE');
+    const deleteHeaders = deleteCall?.[1]?.headers as Record<string, string>;
+    expect(deleteHeaders['X-LoboStats-Session-Action']).toBe('cancel');
   });
 });
 

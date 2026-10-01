@@ -1,6 +1,6 @@
 import { computed, DestroyRef, inject, Injectable, InjectionToken, signal } from '@angular/core';
 
-const EXPECTED_PROTOCOL_VERSION = '2';
+const SUPPORTED_PROTOCOL_VERSIONS = new Set(['2', '3']);
 const REQUEST_TIMEOUT_MS = 5_000;
 const POLL_INTERVAL_MS = 2_000;
 const MAX_PAIR_DURATION_MS = 15 * 60 * 1000;
@@ -51,6 +51,11 @@ interface AgentSessionView {
     | 'agent_ui_claimed'
     | 'mysql_connecting'
     | 'mysql_objects_ready'
+    | 'mysql_object_selected'
+    | 'mysql_columns_loading'
+    | 'mysql_columns_ready'
+    | 'mysql_preview_running'
+    | 'mysql_preview_ready'
     | 'agent_ui_complete';
   createdAt: string;
   expiresAt: string;
@@ -118,10 +123,10 @@ export class AgentApiService {
     try {
       this.setState('checking', 'Buscando LoboStats Agent en este equipo...');
       const status = await this.readStatus(operation.controller.signal);
-      if (status.protocolVersion !== EXPECTED_PROTOCOL_VERSION) {
+      if (!SUPPORTED_PROTOCOL_VERSIONS.has(status.protocolVersion)) {
         throw new AgentClientError(
           'incompatible',
-          `El agente usa el protocolo ${status.protocolVersion}; LoboStats requiere la versión ${EXPECTED_PROTOCOL_VERSION}`,
+          `El agente usa el protocolo ${status.protocolVersion}; LoboStats requiere la versión 2 o 3`,
         );
       }
 
@@ -135,7 +140,7 @@ export class AgentApiService {
         'Completa la verificación en la ventana del agente local',
         status.version,
       );
-      await this.waitUntilClaimed(session, operation.controller.signal);
+      await this.waitUntilClaimed(session, status.protocolVersion, operation.controller.signal);
       await this.releaseSession(operation, 'complete');
       if (this.currentOperation === operation) {
         this.setState('verified', 'LoboStats Agent fue verificado correctamente', status.version);
@@ -201,6 +206,7 @@ export class AgentApiService {
 
   private async waitUntilClaimed(
     session: AgentSessionResponse,
+    protocolVersion: string,
     signal: AbortSignal,
   ): Promise<void> {
     const deadline = Math.min(Date.parse(session.expiresAt), Date.now() + MAX_PAIR_DURATION_MS);
@@ -229,7 +235,7 @@ export class AgentApiService {
       }
 
       const payload: unknown = await response.json();
-      if (!isAgentSessionState(payload, session.id)) {
+      if (!isAgentSessionState(payload, session.id, protocolVersion)) {
         throw new AgentClientError('incompatible', 'El estado devuelto por el agente no es válido');
       }
       if (payload.status === 'agent_ui_complete') return;
@@ -249,6 +255,36 @@ export class AgentApiService {
         this.setState(
           'waiting-for-agent',
           'Revisa los objetos disponibles y finaliza la comprobación',
+          this.stateSignal().agentVersion,
+        );
+      } else if (payload.status === 'mysql_object_selected') {
+        this.setState(
+          'waiting-for-agent',
+          'El agente validó la tabla o vista seleccionada',
+          this.stateSignal().agentVersion,
+        );
+      } else if (payload.status === 'mysql_columns_loading') {
+        this.setState(
+          'waiting-for-agent',
+          'El agente está consultando las columnas...',
+          this.stateSignal().agentVersion,
+        );
+      } else if (payload.status === 'mysql_columns_ready') {
+        this.setState(
+          'waiting-for-agent',
+          'Selecciona columnas, filtros y orden en la ventana del agente',
+          this.stateSignal().agentVersion,
+        );
+      } else if (payload.status === 'mysql_preview_running') {
+        this.setState(
+          'waiting-for-agent',
+          'El agente está generando la vista previa MySQL...',
+          this.stateSignal().agentVersion,
+        );
+      } else if (payload.status === 'mysql_preview_ready') {
+        this.setState(
+          'waiting-for-agent',
+          'Revisa la vista previa y finaliza el auxiliar',
           this.stateSignal().agentVersion,
         );
       }
@@ -364,7 +400,11 @@ function isAgentSession(value: unknown, baseUrl: string): value is AgentSessionR
   return false;
 }
 
-function isAgentSessionState(value: unknown, expectedId?: string): value is AgentSessionView {
+function isAgentSessionState(
+  value: unknown,
+  expectedId?: string,
+  protocolVersion = '3',
+): value is AgentSessionView {
   if (!value || typeof value !== 'object') return false;
   const session = value as Partial<AgentSessionView>;
   return (
@@ -383,7 +423,13 @@ function isAgentSessionState(value: unknown, expectedId?: string): value is Agen
       session.status === 'agent_ui_claimed' ||
       session.status === 'mysql_connecting' ||
       session.status === 'mysql_objects_ready' ||
-      session.status === 'agent_ui_complete')
+      session.status === 'agent_ui_complete' ||
+      (protocolVersion === '3' &&
+        (session.status === 'mysql_object_selected' ||
+          session.status === 'mysql_columns_loading' ||
+          session.status === 'mysql_columns_ready' ||
+          session.status === 'mysql_preview_running' ||
+          session.status === 'mysql_preview_ready')))
   );
 }
 
