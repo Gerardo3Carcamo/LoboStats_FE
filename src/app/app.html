@@ -1,83 +1,66 @@
-@if (isAuthRoute()) {
-  <router-outlet />
-} @else {
-  <a class="skip-link" href="#main-content">Saltar al contenido</a>
-  <div class="app-shell">
-  <aside class="sidebar" aria-label="Navegación principal">
-    <a class="brand" routerLink="/" aria-label="LoboStats, inicio" data-tour="brand">
-      <span class="brand-mark" aria-hidden="true">L</span>
-      <span><strong>LoboStats</strong><small>análisis estadístico</small></span>
+<a class="skip-link" href="#main-content">Saltar al contenido</a>
+
+<div class="app-frame">
+  <aside class="sidebar">
+    <a class="brand" href="/" aria-label="LoboStats, inicio">
+      <span class="brand-mark" aria-hidden="true">LS</span>
+      <span>
+        <strong>LoboStats</strong>
+        <small>Laboratorio estadístico</small>
+      </span>
     </a>
 
-    <nav class="sidebar-nav" aria-label="Secciones de análisis">
-      @for (item of navItems; track item.path) {
-        <a [routerLink]="item.path" routerLinkActive="active"
-           [routerLinkActiveOptions]="{ exact: item.exact }">
-          <mat-icon aria-hidden="true">{{ item.icon }}</mat-icon>
-          <span>{{ item.label }}</span>
-        </a>
+    <nav aria-label="Módulos de análisis">
+      @for (group of navigation; track group.label) {
+        <section class="nav-group">
+          <p>{{ group.label }}</p>
+          @for (item of group.items; track item.badge) {
+            @if (item.available) {
+              <a
+                class="nav-item"
+                [routerLink]="item.path"
+                routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }"
+              >
+                <span>{{ item.badge }}</span>
+                {{ item.label }}
+              </a>
+            } @else {
+              <span class="nav-item unavailable">
+                <span>{{ item.badge }}</span>
+                {{ item.label }}
+                <small>Próximamente</small>
+              </span>
+            }
+          }
+        </section>
       }
     </nav>
 
-    <div class="account-block">
-      @if (auth.user(); as user) {
-        <div class="account-copy"><small>Sesión</small><strong>{{ user.full_name || user.email }}</strong></div>
-        <button type="button" (click)="logout()" aria-label="Cerrar sesión"><mat-icon aria-hidden="true">logout</mat-icon></button>
-      }
-    </div>
-
-    <div class="dataset-status" aria-live="polite">
-      <span class="status-dot" [class.ready]="data.hasDataset()"></span>
-      @if (data.dataset(); as dataset) {
-        <div><small>Dataset activo</small><strong>{{ dataset.name }}</strong></div>
-      } @else {
-        <div><small>Sesión lista</small><strong>Sin datos</strong></div>
-      }
+    <div class="sidebar-foot">
+      <span class="status-dot" aria-hidden="true"></span>
+      <span><strong>Fase 1</strong><small>Base del proyecto</small></span>
     </div>
   </aside>
 
-  <div class="workspace">
-    <header class="topbar" data-tour="dataset-status">
-      <a class="mobile-brand" routerLink="/" aria-label="LoboStats, inicio">L</a>
-      <div class="workspace-status">
-        <span class="status-dot" [class.ready]="data.hasDataset()"></span>
-        <div>
-          <strong>{{ data.dataset()?.name ?? 'Espacio de análisis' }}</strong>
-          @if (data.dataset(); as dataset) {
-            <small>{{ dataset.row_count }} filas · {{ dataset.column_count }} variables</small>
-          } @else {
-            <small>Sin una muestra activa</small>
-          }
-        </div>
+  <main id="main-content" tabindex="-1">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Universidad Autónoma de Coahuila</p>
+        <h1>Laboratorio de datos</h1>
       </div>
       <div class="topbar-actions">
-        <svg class="signal-line" viewBox="0 0 520 64" preserveAspectRatio="none" aria-hidden="true">
-          <path [attr.d]="pulsePath()" />
-        </svg>
-        <button class="tutorial-button" type="button" data-tour="start" (click)="tutorial.start()">
-          <mat-icon aria-hidden="true">school</mat-icon><span>Ver tutorial</span>
+        <button class="help-button" type="button" (click)="startTour($event)">
+          <span aria-hidden="true">?</span>
+          Ayuda
         </button>
-        @if (auth.user(); as user) {
-          <span class="topbar-user" [title]="user.email">{{ user.full_name || user.email }}</span>
-          <button class="logout-button" type="button" (click)="logout()" aria-label="Cerrar sesión">
-            <mat-icon aria-hidden="true">logout</mat-icon>
-          </button>
-        }
+        <div class="account">
+          <span class="account-avatar" aria-hidden="true">A</span>
+          <span><strong>Alumno UAdeC</strong><small>Modo desarrollo</small></span>
+        </div>
       </div>
     </header>
 
-    <main id="main-content" tabindex="-1">
-      <router-outlet />
-    </main>
-  </div>
-
-  <nav class="mobile-nav" aria-label="Navegación móvil">
-    @for (item of navItems; track item.path) {
-      <a [routerLink]="item.path" routerLinkActive="active"
-         [routerLinkActiveOptions]="{ exact: item.exact }">
-        <mat-icon aria-hidden="true">{{ item.icon }}</mat-icon><span>{{ item.shortLabel }}</span>
-      </a>
-    }
-  </nav>
-  </div>
-}
+    <router-outlet />
+  </main>
+</div>

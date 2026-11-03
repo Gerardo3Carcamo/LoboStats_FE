@@ -1,57 +1,67 @@
-# LoboStats frontend
+# LoboStats Web
 
-SPA Angular 21 para explorar datasets y ejecutar análisis estadísticos contra la API local de LoboStats.
-
-## Requisitos
-
-- Node.js compatible con Angular 21
-- Backend disponible en `http://localhost:5000`
+Interfaz Angular de LoboStats, laboratorio estadistico abierto para estudiantes de la UAdeC.
 
 ## Desarrollo
+
+Requisitos: Node.js 20.19+ y la API en `http://localhost:8000`.
 
 ```bash
 npm install
 npm start
 ```
 
-La aplicación abre en `http://localhost:4200` y consume la API publicada en `https://lobostats-api.arechsolutions.com/api`. La URL está centralizada en `src/app/core/config/api.config.ts`.
+La aplicacion queda disponible en `http://localhost:4200`. El proxy de desarrollo dirige `/api` al backend.
 
-## Funcionalidad
+## Funcionalidad de Fase 1
 
-- Carga CSV con drag and drop o selector de archivo.
-- Creación de datasets mediante una tabla editable.
-- Metadatos y vista previa paginada.
-- Estadística básica y avanzada: descriptiva, pruebas t y Z, intervalos, matrices, normalidad, homogeneidad de varianzas, pruebas no paramétricas, proporciones, correlaciones y potencia.
-- ANOVA one-way, two-way, medidas repetidas, post-hoc, efectos principales e interacción.
-- Calculadora de 17 distribuciones con PDF/PMF, CDF, cola, cuantiles, intervalos, simulación y curvas Plotly; identificación por ranking y gráficos de probabilidad.
-- Dieciséis gráficos organizados por categoría. Chart.js cubre vistas simples y Plotly se carga bajo demanda para boxplot, Q-Q, violín, pairplot, mapa de calor, burbujas y 3D.
-- Resultados genéricos adaptados desde `{ results, interpretation, alpha? }`, con tablas jerárquicas, p-value, supuestos y estados de carga/error.
-- Estado del dataset en un servicio basado en signals.
-- Tutorial guiado y responsive con Driver.js, disponible desde **Ver tutorial** en la barra superior.
-- Registro institucional, verificación por código e inicio/cierre de sesión con rutas privadas.
-- Sesión mediante cookies HttpOnly y protección CSRF; el frontend no almacena tokens.
+- Hoja editable construida con AG Grid Community.
+- Importacion CSV, TXT tabulado y XLSX.
+- Pegado desde el portapapeles.
+- Previsualizacion no destructiva con seleccion de hoja, encabezados, delimitador, codificacion y separador decimal.
+- Deteccion inicial de variables numericas y de texto.
+- Persistencia local y guardado mediante el API de datasets.
+- Datasets remotos revisionados y actualizados después del primer guardado.
+- Estadística descriptiva para variables numéricas, categóricas y fechas.
+- Agrupación de resultados, intervalos de confianza, histogramas, cajas y gráficas Q-Q.
+- Resultados persistidos y exportables como JSON reproducible.
+- Historial de análisis con aviso cuando el dataset tiene una revisión posterior.
+- Layout adaptable a escritorio, tableta y movil.
+- Recorrido guiado de la hoja de trabajo, disponible desde el boton Ayuda.
 
-## Verificación
+## Recorrido guiado
+
+Los recorridos usan Driver.js y se inician manualmente desde Ayuda. Los pasos
+de cada modulo viven en un archivo `*-tour.ts` junto a la funcionalidad. Al
+incorporar o cambiar una accion visible, se deben actualizar sus pasos, la
+revision del recorrido y las pruebas asociadas. Los selectores del tour usan
+atributos `data-tour` y no clases de presentacion.
+
+## Agente local web
+
+El agente local se desarrolla y publica desde un repositorio independiente:
+
+`/Users/gerardo/Source/Repos/Frontend/lobostats-agent`
+
+La aplicacion Angular se comunica con el agente mediante el protocolo HTTP
+local versionado, pero no comparte codigo ni dependencias mediante rutas
+relativas. Durante el desarrollo el agente escucha exclusivamente en
+`http://127.0.0.1:43127`.
+
+La hoja de trabajo permite comprobar y emparejar el agente local. El bearer
+token vive solo en memoria y se elimina al completar, cancelar o fallar la
+sesion. La UI local permite probar MySQL, seleccionar tablas, vistas y columnas,
+configurar filtros y revisar hasta 100 filas. Con el protocolo 4, la hoja recibe
+la selección confirmada como un snapshot acotado de hasta 100 000 filas y
+1 000 000 de celdas sin recibir las credenciales MySQL.
+
+## Produccion
+
+Los dos contenedores utilizan una red Docker externa compartida:
 
 ```bash
-npm test -- --watch=false
-npm run build
-npm audit
+docker network create lobostats
+docker compose up -d --build
 ```
 
-Los tests usan Vitest y `HttpTestingController`. El build de producción se genera en `dist/lobostats`.
-
-## Docker
-
-La imagen compila Angular y lo sirve con Nginx. Dentro de una red Docker, el proxy espera que la API se llame `backend` y escuche en el puerto `5000`.
-
-```bash
-docker build -t lobostats-web .
-docker run --rm -p 4200:80 lobostats-web
-```
-
-## API
-
-El frontend usa `https://lobostats-api.arechsolutions.com/api`. Autenticación consume `/auth/register`, `verify`, `resend-code`, `login`, `refresh`, `refresh-csrf`, `logout` y `me`. Todas las solicitudes incluyen credenciales. Los JWT permanecen en cookies HttpOnly; únicamente los valores CSRF, que no conceden acceso por sí solos, se conservan en `sessionStorage` y se envían en `X-CSRF-TOKEN` para métodos mutables.
-
-Las rutas públicas son `/login`, `/registro` y `/verificar`. El resto requiere una sesión válida y conserva la URL solicitada para continuar después del acceso.
+El frontend se publica por defecto en el puerto `8080`. nginx sirve la SPA y reenvia `/api` al contenedor `lobostats-api`.

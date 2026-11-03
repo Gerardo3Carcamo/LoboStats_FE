@@ -1,0 +1,191 @@
+<dialog
+  #dialog
+  class="import-dialog"
+  aria-labelledby="import-preview-title"
+  aria-describedby="import-preview-description"
+  (close)="onClose()"
+>
+  <header class="dialog-header">
+    <div>
+      <p class="dialog-label">Revisión antes de importar</p>
+      <h2 #heading id="import-preview-title" tabindex="-1">Previsualiza tus datos</h2>
+      <p id="import-preview-description">
+        Confirma cómo se interpretará el archivo. El conjunto actual no cambiará hasta que aceptes.
+      </p>
+    </div>
+    <button
+      class="close-button"
+      type="button"
+      aria-label="Cerrar previsualización"
+      (click)="cancel()"
+    >
+      ×
+    </button>
+  </header>
+
+  <div class="file-summary">
+    <div>
+      <span>Origen</span>
+      <strong>{{ draft().fileName }}</strong>
+    </div>
+    <div>
+      <span>Tamaño</span>
+      <strong>{{ formatSize(draft().fileSize) }}</strong>
+    </div>
+    @if (draft().table; as table) {
+      <div>
+        <span>Resultado</span>
+        <strong>{{ table.rows.length }} filas × {{ table.columns.length }} columnas</strong>
+      </div>
+    }
+  </div>
+
+  <section class="import-settings" aria-labelledby="import-settings-title">
+    <h3 id="import-settings-title">Interpretación</h3>
+
+    @if (draft().kind === 'workbook') {
+      <label>
+        Hoja de Excel
+        <select [value]="draft().selectedSheet" (change)="changeSheet($event)">
+          @for (sheet of draft().sheets; track sheet.name) {
+            <option [value]="sheet.name">{{ sheet.name }}</option>
+          }
+        </select>
+      </label>
+    } @else {
+      <label>
+        Separador
+        <select [value]="draft().delimiter" (change)="changeDelimiter($event)">
+          <option value="comma">Coma</option>
+          <option value="semicolon">Punto y coma</option>
+          <option value="tab">Tabulador</option>
+        </select>
+      </label>
+
+      @if (draft().sourceBuffer) {
+        <label>
+          Codificación
+          <select [value]="draft().encoding" (change)="changeEncoding($event)">
+            <option value="utf-8">UTF-8</option>
+            <option value="windows-1252">Windows-1252</option>
+          </select>
+        </label>
+      }
+
+      <label>
+        Separador decimal
+        <select [value]="draft().decimalSeparator" (change)="changeDecimalSeparator($event)">
+          <option value=".">Punto (12.5)</option>
+          <option value=",">Coma (12,5)</option>
+        </select>
+      </label>
+    }
+
+    <label class="checkbox-field">
+      <input
+        type="checkbox"
+        [checked]="draft().firstRowIsHeader"
+        (change)="changeFirstRow($event)"
+      />
+      La primera fila contiene nombres de variables
+    </label>
+  </section>
+
+  <div class="sr-only" role="status" aria-live="polite" aria-atomic="true">
+    {{ interpretationStatus() }}
+  </div>
+
+  @if (draft().error) {
+    <div class="import-error" role="alert">
+      <strong>No se puede confirmar todavía</strong>
+      <span>{{ draft().error }}</span>
+    </div>
+  }
+
+  @if (draft().table) {
+    <section class="schema-summary" aria-labelledby="schema-summary-title">
+      <div class="section-heading">
+        <div>
+          <p class="dialog-label">Esquema detectado</p>
+          <h3 id="schema-summary-title">Tipos y valores faltantes</h3>
+        </div>
+        <span>Podrás editar este esquema en la siguiente fase.</span>
+      </div>
+
+      <div class="column-list">
+        @for (column of visibleColumns(); track column.key) {
+          <div class="column-item">
+            <strong>{{ column.name }}</strong>
+            <span>{{ typeLabel(column.dataType) }}</span>
+            <small>{{ column.missing }} faltantes</small>
+          </div>
+        }
+      </div>
+      @if (draft().columns.length > visibleColumns().length) {
+        <p class="truncation-note">
+          Se muestran 24 de {{ draft().columns.length }} variables en este resumen.
+        </p>
+      }
+    </section>
+
+    <section class="data-preview" aria-labelledby="data-preview-title">
+      <div class="section-heading">
+        <div>
+          <p class="dialog-label">Primeras observaciones</p>
+          <h3 id="data-preview-title">Vista previa</h3>
+        </div>
+        <span>Se muestran hasta 8 filas.</span>
+      </div>
+
+      <div class="preview-scroll" tabindex="0" aria-label="Tabla de previsualización de datos">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Fila</th>
+              @for (column of previewColumns(); track column.key) {
+                <th scope="col">{{ column.name }}</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of draft().previewRows; track $index; let rowIndex = $index) {
+              <tr>
+                <th scope="row">{{ rowIndex + 1 }}</th>
+                @for (cell of row; track $index) {
+                  <td [class.missing-value]="cell === null">{{ formatCell(cell) }}</td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (draft().columns.length > previewColumns().length) {
+        <p class="truncation-note">
+          La tabla muestra las primeras 20 de {{ draft().columns.length }} variables.
+        </p>
+      }
+    </section>
+  }
+
+  <footer class="dialog-footer">
+    <div class="replacement-note">
+      @if (existingRowCount()) {
+        <strong>Se reemplazarán {{ existingRowCount() }} observaciones actuales.</strong>
+      } @else {
+        <strong>La hoja actual no contiene observaciones.</strong>
+      }
+      <span>El nombre y las columnas se actualizarán. Puedes cancelar sin modificar nada.</span>
+    </div>
+    <div class="dialog-actions">
+      <button class="dialog-button secondary" type="button" (click)="cancel()">Cancelar</button>
+      <button
+        class="dialog-button primary"
+        type="button"
+        [disabled]="!draft().table"
+        (click)="confirmSelection()"
+      >
+        {{ existingRowCount() ? 'Importar y reemplazar' : 'Importar datos' }}
+      </button>
+    </div>
+  </footer>
+</dialog>

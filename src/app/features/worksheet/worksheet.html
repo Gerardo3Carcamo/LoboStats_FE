@@ -1,0 +1,143 @@
+<section class="workspace-intro">
+  <div>
+    <label class="section-label" for="dataset-name">Nombre del dataset</label>
+    <input
+      id="dataset-name"
+      class="dataset-name"
+      data-tour="dataset-name"
+      maxlength="120"
+      [value]="store.name()"
+      (change)="rename($event)"
+    />
+  </div>
+  <div class="dataset-meta">
+    <span
+      ><strong>{{ store.filledRows().length }}</strong> observaciones</span
+    >
+    <span
+      ><strong>{{ store.columns().length }}</strong> variables</span
+    >
+  </div>
+</section>
+
+<section class="workspace-grid">
+  <article class="sheet-card">
+    <div class="toolbar">
+      <div class="toolbar-actions">
+        <label
+          class="button primary"
+          for="dataset-file"
+          data-tour="import-data"
+          [class.disabled]="importing()"
+          [attr.aria-disabled]="importing()"
+        >
+          <input
+            id="dataset-file"
+            class="file-input"
+            type="file"
+            accept=".csv,.txt,.xlsx"
+            aria-describedby="import-formats"
+            [disabled]="importing()"
+            (change)="importFile($event)"
+          />
+          <span aria-hidden="true">+</span> {{ importing() ? 'Leyendo...' : 'Importar datos' }}
+        </label>
+        <span class="secondary-actions">
+          <button
+            class="button"
+            type="button"
+            data-tour="row-actions"
+            [disabled]="importing()"
+            (click)="pasteFromClipboard($event)"
+          >
+            Pegar tabla
+          </button>
+          <button
+            class="button agent-button"
+            type="button"
+            data-tour="local-agent"
+            [attr.aria-busy]="agentBusy()"
+            (click)="handleAgentAction($event)"
+          >
+            <span class="agent-mark" aria-hidden="true">DB</span>
+            {{ agentBusy() ? 'Cancelar conexión' : 'Comprobar agente' }}
+          </button>
+          <button class="button quiet" type="button" (click)="addRow()">Agregar fila</button>
+        </span>
+      </div>
+      <button
+        class="button save"
+        data-tour="save-data"
+        type="button"
+        [disabled]="saving()"
+        [attr.aria-busy]="saving()"
+        (click)="save()"
+      >
+        {{ saving() ? 'Guardando...' : 'Guardar' }}
+      </button>
+    </div>
+
+    <h2 class="sr-only">Datos del conjunto activo</h2>
+    <ag-grid-angular
+      class="data-grid"
+      data-tour="data-grid"
+      [theme]="theme"
+      [rowData]="store.rows()"
+      [columnDefs]="columnDefs()"
+      [localeText]="localeText"
+      [singleClickEdit]="true"
+      [stopEditingWhenCellsLoseFocus]="true"
+      (gridReady)="gridReady($event)"
+      (cellValueChanged)="cellChanged($event)"
+    />
+
+    <footer class="sheet-status" data-tour="workspace-status" [attr.data-kind]="statusKind()">
+      <span class="status-indicator" aria-hidden="true"></span>
+      <span>{{ status() }}</span>
+      <span id="import-formats" class="format-hint">Archivo, portapapeles o agente local</span>
+    </footer>
+    <div class="sr-only" role="status" aria-live="polite" aria-atomic="true">
+      {{ politeStatus() }}
+    </div>
+    <div class="sr-only" role="alert" aria-atomic="true">{{ errorStatus() }}</div>
+  </article>
+
+  <aside class="context-panel" data-tour="workspace-context">
+    <div class="context-number" aria-hidden="true">01</div>
+    <p class="section-label">Punto de partida</p>
+    <h2>Construye tu conjunto de datos</h2>
+    <p>
+      Si tu archivo incluye encabezados, usa la primera fila como nombres de variables. Antes de
+      importar podrás revisar cómo LoboStats interpreta cada columna.
+    </p>
+
+    <div class="tip">
+      <span aria-hidden="true">i</span>
+      <p>
+        <strong>Consejo</strong>Una observación por fila y una variable por columna produce mejores
+        análisis.
+      </p>
+    </div>
+
+    <div class="next-step">
+      <small>Siguiente módulo</small>
+      <strong>Estadística descriptiva</strong>
+      <a routerLink="/descriptive">Abrir análisis</a>
+    </div>
+  </aside>
+</section>
+
+@if (importDraft(); as draft) {
+  <app-import-preview-dialog
+    #importPreview
+    [draft]="draft"
+    [existingRowCount]="store.filledRows().length"
+    (firstRowIsHeaderChange)="updateFirstRowIsHeader($event)"
+    (delimiterChange)="updateDelimiter($event)"
+    (encodingChange)="updateEncoding($event)"
+    (decimalSeparatorChange)="updateDecimalSeparator($event)"
+    (sheetChange)="updateSheet($event)"
+    (confirmed)="confirmImport()"
+    (closed)="finishImport($event)"
+  />
+}

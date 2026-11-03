@@ -1,0 +1,342 @@
+<section class="analysis-heading">
+  <div>
+    <p class="section-label">Estadística descriptiva</p>
+    <h2>Describe lo que hay en la hoja</h2>
+    <p>Resume magnitud, dispersión, forma y valores faltantes sin alterar el conjunto original.</p>
+  </div>
+  <a class="back-link" routerLink="/">Volver a la hoja</a>
+</section>
+
+<div class="analysis-layout">
+  <aside class="configuration-panel" aria-labelledby="configuration-title">
+    <h3 id="configuration-title">Configurar análisis</h3>
+    <p class="dataset-reference">
+      <strong>{{ store.name() }}</strong>
+      <span>{{ store.filledRows().length }} observaciones · {{ columns().length }} variables</span>
+    </p>
+
+    <fieldset>
+      <legend>Variables a describir</legend>
+      <div class="variable-list">
+        @for (column of columns(); track column.key) {
+          <label>
+            <input
+              type="checkbox"
+              [checked]="selectedColumns().includes(column.key)"
+              [disabled]="groupBy() === column.key"
+              (change)="toggleColumn(column.key, $any($event.target).checked)"
+            />
+            <span
+              >{{ column.name }}<small>{{ column.data_type }}</small></span
+            >
+          </label>
+        }
+      </div>
+    </fieldset>
+
+    <label class="field-label" for="group-by">Separar resultados por</label>
+    <select id="group-by" [value]="groupBy() ?? ''" (change)="updateGroupBy($event)">
+      <option value="">Sin agrupación</option>
+      @for (column of columns(); track column.key) {
+        @if (!selectedColumns().includes(column.key)) {
+          <option [value]="column.key">{{ column.name }}</option>
+        }
+      }
+    </select>
+
+    <div class="option-grid">
+      <label>
+        <span>Nivel de confianza</span>
+        <input
+          type="number"
+          min="80"
+          max="99.9"
+          step="0.1"
+          [value]="confidencePercent()"
+          (change)="updateConfidence($event)"
+        />
+        <small>%</small>
+      </label>
+      <label>
+        <span>Intervalos del histograma</span>
+        <input
+          type="number"
+          min="3"
+          max="100"
+          [value]="histogramBins()"
+          (change)="updateBins($event)"
+        />
+      </label>
+    </div>
+
+    <button class="run-button" type="button" [disabled]="!canRun()" (click)="analyze()">
+      {{ running() ? 'Calculando…' : 'Calcular descriptivos' }}
+    </button>
+    <p class="configuration-note">
+      La hoja se guarda como una revisión antes de calcular. Los valores faltantes se excluyen y se
+      reportan.
+    </p>
+
+    @if (history().length || historyLoading()) {
+      <section class="analysis-history" aria-labelledby="history-title">
+        <h4 id="history-title">Historial descriptivo</h4>
+        @if (historyLoading()) {
+          <p>Cargando resultados…</p>
+        } @else {
+          <ol>
+            @for (item of history(); track item.id) {
+              <li>
+                <button type="button" (click)="openHistory(item)">
+                  <span>Análisis #{{ item.id }}</span>
+                  <small>
+                    revisión {{ item.dataset_revision }}
+                    @if (item.is_stale) {
+                      · anterior
+                    }
+                  </small>
+                </button>
+              </li>
+            }
+          </ol>
+        }
+      </section>
+    }
+  </aside>
+
+  <main class="results-panel">
+    <div class="analysis-status" [attr.data-kind]="statusKind()" role="status">
+      <span aria-hidden="true"></span>{{ status() }}
+    </div>
+
+    @if (run(); as analysis) {
+      <header class="result-header">
+        <div>
+          <p>Resultado {{ analysis.id }} · revisión {{ analysis.dataset_revision }}</p>
+          <h3>{{ analysis.result.dataset.name }}</h3>
+        </div>
+        <button type="button" (click)="downloadResult()">Descargar JSON</button>
+      </header>
+
+      @if (analysis.is_stale) {
+        <p class="stale-result">
+          Este resultado pertenece a una revisión anterior de la hoja. Consérvalo como evidencia
+          histórica o ejecuta un análisis nuevo.
+        </p>
+      }
+
+      @if (analysis.warnings.length) {
+        <section class="warning-list" aria-labelledby="warnings-title">
+          <h4 id="warnings-title">Advertencias</h4>
+          <ul>
+            @for (warning of analysis.warnings; track warning) {
+              <li>{{ warning }}</li>
+            }
+          </ul>
+        </section>
+      }
+
+      @for (group of analysis.result.groups; track group.label) {
+        <section class="result-group">
+          <header>
+            <h4>{{ group.label }}</h4>
+            <span>{{ group.row_count }} filas consideradas</span>
+          </header>
+
+          @for (column of group.columns; track column.key) {
+            <article class="column-result">
+              <div class="column-title">
+                <div>
+                  <h5>{{ column.name }}</h5>
+                  <span>{{ column.data_type }}</span>
+                </div>
+                <p>{{ column.valid_count }} válidos · {{ column.missing_count }} faltantes</p>
+              </div>
+
+              @if (column.numeric; as numeric) {
+                <dl class="metric-grid">
+                  <div>
+                    <dt>Media</dt>
+                    <dd>{{ formatNumber(numeric.mean) }}</dd>
+                  </div>
+                  <div>
+                    <dt>Mediana</dt>
+                    <dd>{{ formatNumber(numeric.median) }}</dd>
+                  </div>
+                  <div>
+                    <dt>Desv. estándar</dt>
+                    <dd>{{ formatNumber(numeric.std_dev) }}</dd>
+                  </div>
+                  <div>
+                    <dt>Error estándar</dt>
+                    <dd>{{ formatNumber(numeric.std_error) }}</dd>
+                  </div>
+                  <div>
+                    <dt>Varianza</dt>
+                    <dd>{{ formatNumber(numeric.variance) }}</dd>
+                  </div>
+                  <div>
+                    <dt>Mínimo</dt>
+                    <dd>{{ formatNumber(numeric.minimum) }}</dd>
+                  </div>
+                  <div>
+                    <dt>Q1</dt>
+                    <dd>{{ formatNumber(numeric.q1) }}</dd>
+                  </div>
+                  <div>
+                    <dt>Q3</dt>
+                    <dd>{{ formatNumber(numeric.q3) }}</dd>
+                  </div>
+                  <div>
+                    <dt>Máximo</dt>
+                    <dd>{{ formatNumber(numeric.maximum) }}</dd>
+                  </div>
+                  <div>
+                    <dt>Asimetría</dt>
+                    <dd>{{ formatNumber(numeric.skewness) }}</dd>
+                  </div>
+                  <div>
+                    <dt>Curtosis</dt>
+                    <dd>{{ formatNumber(numeric.kurtosis_excess) }}</dd>
+                  </div>
+                  <div>
+                    <dt>IC de la media</dt>
+                    <dd>
+                      @if (numeric.confidence_interval_mean; as interval) {
+                        {{ formatNumber(interval.lower) }} — {{ formatNumber(interval.upper) }}
+                      } @else {
+                        —
+                      }
+                    </dd>
+                  </div>
+                </dl>
+
+                <div class="plot-grid">
+                  <figure class="histogram-figure">
+                    <figcaption>Distribución</figcaption>
+                    <div class="histogram" aria-label="Histograma de {{ column.name }}">
+                      @for (count of numeric.histogram.counts; track $index) {
+                        <span
+                          [style.height.%]="barHeight(numeric, count)"
+                          [attr.title]="count + ' observaciones'"
+                        ></span>
+                      }
+                    </div>
+                    <div class="plot-axis">
+                      <span>{{ formatNumber(numeric.minimum) }}</span>
+                      <span>{{ formatNumber(numeric.maximum) }}</span>
+                    </div>
+                  </figure>
+
+                  <figure class="box-figure">
+                    <figcaption>Resumen de cinco números</figcaption>
+                    <div class="boxplot" aria-label="Diagrama de caja de {{ column.name }}">
+                      <span
+                        class="whisker-line"
+                        [style.left.%]="boxPosition(numeric, numeric.boxplot.lower_whisker)"
+                        [style.width.%]="
+                          boxPosition(numeric, numeric.boxplot.upper_whisker) -
+                          boxPosition(numeric, numeric.boxplot.lower_whisker)
+                        "
+                      ></span>
+                      <span
+                        class="box"
+                        [style.left.%]="boxPosition(numeric, numeric.boxplot.q1)"
+                        [style.width.%]="
+                          boxPosition(numeric, numeric.boxplot.q3) -
+                          boxPosition(numeric, numeric.boxplot.q1)
+                        "
+                      ></span>
+                      <span
+                        class="median"
+                        [style.left.%]="boxPosition(numeric, numeric.boxplot.median)"
+                      ></span>
+                      @for (outlier of numeric.boxplot.outliers; track $index) {
+                        <span class="outlier" [style.left.%]="boxPosition(numeric, outlier)"></span>
+                      }
+                    </div>
+                    <div class="plot-axis">
+                      <span>{{ formatNumber(numeric.minimum) }}</span>
+                      <span>{{ formatNumber(numeric.maximum) }}</span>
+                    </div>
+                  </figure>
+
+                  <figure class="qq-figure">
+                    <figcaption>Probabilidad normal</figcaption>
+                    <svg
+                      viewBox="0 0 300 200"
+                      role="img"
+                      aria-label="Gráfica Q-Q de {{ column.name }}"
+                    >
+                      <line x1="18" y1="182" x2="282" y2="18"></line>
+                      @for (value of numeric.qq_plot.observed; track $index) {
+                        <circle
+                          [attr.cx]="qqX(numeric.qq_plot, numeric.qq_plot.theoretical[$index])"
+                          [attr.cy]="qqY(numeric.qq_plot, value)"
+                          r="2.5"
+                        ></circle>
+                      }
+                    </svg>
+                  </figure>
+                </div>
+              } @else if (column.categorical; as categorical) {
+                <div class="categorical-summary">
+                  <p>
+                    <strong>{{ categorical.unique_count }}</strong> valores únicos · moda
+                    <strong>{{ categorical.mode ?? '—' }}</strong>
+                  </p>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Valor</th>
+                        <th>Frecuencia</th>
+                        <th>Porcentaje</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (frequency of categorical.frequencies; track frequency.value) {
+                        <tr>
+                          <td>{{ frequency.value }}</td>
+                          <td>{{ frequency.count }}</td>
+                          <td>{{ formatNumber(frequency.percentage, 2) }} %</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                  @if (categorical.truncated) {
+                    <small>La tabla muestra los 25 valores más frecuentes.</small>
+                  }
+                </div>
+              }
+
+              @if (column.date; as dateSummary) {
+                <p class="date-range">
+                  Desde <strong>{{ dateSummary.minimum ?? '—' }}</strong> hasta
+                  <strong>{{ dateSummary.maximum ?? '—' }}</strong>
+                </p>
+              }
+            </article>
+          }
+        </section>
+      }
+
+      <section class="guidance">
+        <h4>Cómo leer este resultado</h4>
+        <ul>
+          @for (item of analysis.result.guidance; track item) {
+            <li>{{ item }}</li>
+          }
+        </ul>
+        <p>
+          Motor {{ analysis.engine_version }} · {{ formatDate(analysis.created_at) }} · hash
+          {{ analysis.dataset_sha256.slice(0, 12) }}
+        </p>
+      </section>
+    } @else {
+      <section class="empty-result">
+        <div class="empty-glyph" aria-hidden="true">x̄</div>
+        <h3>Aún no hay resultados</h3>
+        <p>Selecciona variables y ejecuta el análisis. La hoja actual no cambiará.</p>
+      </section>
+    }
+  </main>
+</div>
