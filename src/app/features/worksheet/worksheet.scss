@@ -311,10 +311,15 @@
     margin: 5px 0;
   }
 
-  span {
+  span,
+  a {
     color: var(--green);
     font-size: 0.7rem;
     font-weight: 700;
+  }
+
+  a:focus-visible {
+    outline-offset: 4px;
   }
 }
 

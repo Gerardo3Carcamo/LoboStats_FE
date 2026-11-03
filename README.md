@@ -21,6 +21,11 @@ La aplicacion queda disponible en `http://localhost:4200`. El proxy de desarroll
 - Previsualizacion no destructiva con seleccion de hoja, encabezados, delimitador, codificacion y separador decimal.
 - Deteccion inicial de variables numericas y de texto.
 - Persistencia local y guardado mediante el API de datasets.
+- Datasets remotos revisionados y actualizados después del primer guardado.
+- Estadística descriptiva para variables numéricas, categóricas y fechas.
+- Agrupación de resultados, intervalos de confianza, histogramas, cajas y gráficas Q-Q.
+- Resultados persistidos y exportables como JSON reproducible.
+- Historial de análisis con aviso cuando el dataset tiene una revisión posterior.
 - Layout adaptable a escritorio, tableta y movil.
 - Recorrido guiado de la hoja de trabajo, disponible desde el boton Ayuda.
 
@@ -45,8 +50,10 @@ relativas. Durante el desarrollo el agente escucha exclusivamente en
 
 La hoja de trabajo permite comprobar y emparejar el agente local. El bearer
 token vive solo en memoria y se elimina al completar, cancelar o fallar la
-sesion. La UI local ya puede probar MySQL y mostrar tablas y vistas; selección
-de columnas, filtros y transferencia aún no están disponibles.
+sesion. La UI local permite probar MySQL, seleccionar tablas, vistas y columnas,
+configurar filtros y revisar hasta 100 filas. Con el protocolo 4, la hoja recibe
+la selección confirmada como un snapshot acotado de hasta 100 000 filas y
+1 000 000 de celdas sin recibir las credenciales MySQL.
 
 ## Produccion
 

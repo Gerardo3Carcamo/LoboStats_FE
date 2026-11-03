@@ -16,4 +16,10 @@ export class DatasetApi {
   create(payload: DatasetPayload): Observable<Dataset> {
     return this.http.post<Dataset>(this.endpoint, payload, { headers: this.developmentHeaders });
   }
+
+  update(datasetId: number, payload: DatasetPayload): Observable<Dataset> {
+    return this.http.put<Dataset>(`${this.endpoint}/${datasetId}`, payload, {
+      headers: this.developmentHeaders,
+    });
+  }
 }

@@ -73,6 +73,77 @@ describe('AgentApiService', () => {
     expect(JSON.stringify(service.state())).not.toContain(SESSION_TOKEN);
   });
 
+  it('downloads a protocol 4 MySQL snapshot before releasing the session', async () => {
+    const fetchAgent = jasmine
+      .createSpy('fetchAgent')
+      .and.callFake(async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+        const url = String(input);
+        if (url.endsWith('/v1/status')) {
+          return jsonResponse({
+            status: 'ok',
+            service: 'LoboStats Agent',
+            version: '0.4.0',
+            protocolVersion: '4',
+          });
+        }
+        if (url.endsWith('/v1/import-sessions') && init?.method === 'POST') {
+          return jsonResponse(
+            {
+              id: SESSION_ID,
+              requestId: REQUEST_ID,
+              origin: 'http://localhost:4200',
+              token: SESSION_TOKEN,
+              status: 'waiting_for_agent_ui',
+              createdAt: new Date().toISOString(),
+              expiresAt: new Date(Date.now() + 60_000).toISOString(),
+              uiUrl: `${BASE_URL}/ui/#session=${SESSION_ID}&claim=${CLAIM_TOKEN}`,
+            },
+            201,
+          );
+        }
+        if (url.endsWith(`/v1/import-sessions/${SESSION_ID}`) && init?.method === 'GET') {
+          return jsonResponse(sessionView('mysql_snapshot_ready'));
+        }
+        if (
+          url.endsWith(`/v1/import-sessions/${SESSION_ID}/mysql/snapshot`) &&
+          init?.method === 'POST'
+        ) {
+          return jsonResponse({
+            session: sessionView('mysql_snapshot_transferred'),
+            source: { database: 'laboratorio', object: { name: 'mediciones', type: 'table' } },
+            columns: [
+              {
+                name: 'valor',
+                mysqlType: 'decimal(10,2)',
+                lobostatsType: 'number',
+                nullable: false,
+                primaryKey: false,
+                ordinalPosition: 1,
+              },
+            ],
+            rows: [{ valor: '12.50' }, { valor: null }],
+            limit: 100_000,
+            truncated: false,
+            queryDurationMs: 12,
+          });
+        }
+        if (url.endsWith(`/v1/import-sessions/${SESSION_ID}`) && init?.method === 'DELETE') {
+          return new Response(null, { status: 204 });
+        }
+        return new Response(null, { status: 404 });
+      });
+    TestBed.configureTestingModule({ providers: [{ provide: AGENT_FETCH, useValue: fetchAgent }] });
+    const service = TestBed.inject(AgentApiService);
+
+    const snapshot = await service.pair(() => undefined);
+
+    expect(snapshot?.source.database).toBe('laboratorio');
+    expect(snapshot?.rows).toEqual([{ valor: '12.50' }, { valor: null }]);
+    const methods = fetchAgent.calls.allArgs().map(([, init]) => init?.method);
+    expect(methods.indexOf('POST')).toBeLessThan(methods.lastIndexOf('DELETE'));
+    expect(service.state().message).toContain('2 filas recibidas');
+  });
+
   it('rejects an incompatible protocol before creating a session', async () => {
     const fetchAgent = jasmine.createSpy('fetchAgent').and.resolveTo(
       jsonResponse({
@@ -212,4 +283,15 @@ function jsonResponse(body: unknown, status = 200): Response {
     status,
     headers: { 'Content-Type': 'application/json' },
   });
+}
+
+function sessionView(status: string): Record<string, unknown> {
+  return {
+    id: SESSION_ID,
+    requestId: REQUEST_ID,
+    origin: 'http://localhost:4200',
+    status,
+    createdAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 60_000).toISOString(),
+  };
 }

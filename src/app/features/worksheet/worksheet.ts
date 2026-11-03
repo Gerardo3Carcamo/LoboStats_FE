@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, effect, inject, signal, viewChild } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
+import { RouterLink } from '@angular/router';
 import { AgGridAngular } from 'ag-grid-angular';
 import {
   AllCommunityModule,
@@ -12,8 +12,8 @@ import {
   ValueParserParams,
 } from 'ag-grid-community';
 
-import { DatasetApi } from '../../core/services/dataset-api';
 import { AgentApiService } from '../../core/services/agent-api';
+import { WorkspacePersistenceService } from '../../core/services/workspace-persistence';
 import { WorkspaceStore } from '../../core/services/workspace-store';
 import { CellValue, DatasetColumn } from '../../models/dataset';
 import {
@@ -31,6 +31,7 @@ import {
   MAX_IMPORT_COLUMNS,
   MAX_IMPORT_ROWS,
   matrixToTable,
+  mysqlSnapshotToTable,
   normalizeCell,
   parseDelimited,
   preserveFormattedExcelValue,
@@ -49,13 +50,13 @@ const DELIMITERS: Record<ImportDelimiter, string> = {
 
 @Component({
   selector: 'app-worksheet',
-  imports: [AgGridAngular, ImportPreviewDialog],
+  imports: [AgGridAngular, ImportPreviewDialog, RouterLink],
   templateUrl: './worksheet.html',
   styleUrl: './worksheet.scss',
 })
 export class Worksheet {
   protected readonly store = inject(WorkspaceStore);
-  private readonly datasetApi = inject(DatasetApi);
+  private readonly workspacePersistence = inject(WorkspacePersistenceService);
   private readonly agentApi = inject(AgentApiService);
   private readonly importPreview = viewChild<ImportPreviewDialog>('importPreview');
   protected readonly status = signal('Área de trabajo lista');
@@ -127,7 +128,7 @@ export class Worksheet {
   ]);
 
   protected rename(event: Event): void {
-    this.store.name.set((event.target as HTMLInputElement).value.trim() || 'Hoja sin título');
+    this.store.rename((event.target as HTMLInputElement).value.trim() || 'Hoja sin título');
     this.setStatus('info', 'Cambios pendientes de guardar en el servidor');
   }
 
@@ -166,7 +167,18 @@ export class Worksheet {
     }
 
     try {
-      await this.agentApi.pair((url) => popup.location.replace(url));
+      const snapshot = await this.agentApi.pair((url) => popup.location.replace(url));
+      if (snapshot) {
+        const table = mysqlSnapshotToTable(snapshot);
+        const sourceName = `${snapshot.source.database}.${snapshot.source.object.name}`;
+        this.store.replace(table.columns, table.rows, sourceName);
+        this.setStatus(
+          snapshot.truncated ? 'info' : 'success',
+          snapshot.truncated
+            ? `${table.rows.length.toLocaleString('es-MX')} filas importadas desde ${sourceName}; el límite del snapshot fue alcanzado`
+            : `${table.rows.length.toLocaleString('es-MX')} filas importadas desde ${sourceName}`,
+        );
+      }
       popup.close();
     } catch {
       popup.close();
@@ -319,8 +331,11 @@ export class Worksheet {
     this.saving.set(true);
     this.setStatus('info', 'Guardando en LoboStats...');
     try {
-      const saved = await firstValueFrom(this.datasetApi.create(this.store.payload()));
-      this.setStatus('success', `Conjunto #${saved.id} guardado en el servidor`);
+      const saved = await this.workspacePersistence.saveCurrent();
+      this.setStatus(
+        'success',
+        `Conjunto #${saved.id}, revisión ${saved.revision}, guardado en el servidor`,
+      );
     } catch (error) {
       this.setStatus('error', this.describeSaveError(error));
     } finally {

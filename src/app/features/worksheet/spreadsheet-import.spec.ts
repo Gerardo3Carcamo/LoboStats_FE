@@ -1,6 +1,7 @@
 import {
   detectDelimiter,
   matrixToTable,
+  mysqlSnapshotToTable,
   normalizeCell,
   parseDelimited,
   preserveFormattedExcelValue,
@@ -152,4 +153,75 @@ describe('spreadsheet import', () => {
   it('rejects an empty matrix', () => {
     expect(() => matrixToTable([])).toThrowError('El archivo no contiene datos');
   });
+
+  it('converts a typed MySQL snapshot without losing booleans or dates', () => {
+    const table = mysqlSnapshotToTable({
+      source: { database: 'lab', object: { name: 'mediciones', type: 'table' } },
+      columns: [
+        mysqlColumn('id', 'number', 'int'),
+        mysqlColumn('activo', 'boolean', 'tinyint(1)'),
+        mysqlColumn('fecha', 'date', 'date'),
+      ],
+      rows: [
+        { id: '1', activo: true, fecha: '2026-11-02' },
+        { id: '2', activo: false, fecha: null },
+      ],
+      limit: 100_000,
+      truncated: false,
+      queryDurationMs: 5,
+    });
+
+    expect(table.columns).toEqual([
+      { key: 'c1', name: 'id', data_type: 'number' },
+      { key: 'c2', name: 'activo', data_type: 'text' },
+      { key: 'c3', name: 'fecha', data_type: 'date' },
+    ]);
+    expect(table.rows).toEqual([
+      { c1: 1, c2: 'true', c3: '2026-11-02' },
+      { c1: 2, c2: 'false', c3: null },
+    ]);
+  });
+
+  it('preserves unsafe MySQL integers as text', () => {
+    const table = mysqlSnapshotToTable({
+      source: { database: 'lab', object: { name: 'folios', type: 'table' } },
+      columns: [mysqlColumn('folio', 'number', 'bigint')],
+      rows: [{ folio: '9007199254740993' }],
+      limit: 100_000,
+      truncated: false,
+      queryDurationMs: 2,
+    });
+
+    expect(table.columns[0].data_type).toBe('text');
+    expect(table.rows).toEqual([{ c1: '9007199254740993' }]);
+  });
+
+  it('preserves high-precision MySQL decimals as text', () => {
+    const table = mysqlSnapshotToTable({
+      source: { database: 'lab', object: { name: 'exactos', type: 'table' } },
+      columns: [mysqlColumn('valor', 'number', 'decimal(20,2)')],
+      rows: [{ valor: '123456789012345.67' }],
+      limit: 100_000,
+      truncated: false,
+      queryDurationMs: 2,
+    });
+
+    expect(table.columns[0].data_type).toBe('text');
+    expect(table.rows).toEqual([{ c1: '123456789012345.67' }]);
+  });
 });
+
+function mysqlColumn(
+  name: string,
+  lobostatsType: 'number' | 'text' | 'date' | 'boolean',
+  mysqlType: string,
+) {
+  return {
+    name,
+    mysqlType,
+    lobostatsType,
+    nullable: true,
+    primaryKey: false,
+    ordinalPosition: 1,
+  } as const;
+}

@@ -1,3 +1,4 @@
+import type { AgentMysqlSnapshot } from '../../models/agent-import';
 import type { CellValue, DataRow, DatasetColumn, DataType } from '../../models/dataset';
 
 export const MAX_IMPORT_COLUMNS = 500;
@@ -137,6 +138,56 @@ export function matrixToTable(
       ),
     );
   return { columns, rows };
+}
+
+export function mysqlSnapshotToTable(snapshot: AgentMysqlSnapshot): ImportedTable {
+  const columnTypes = snapshot.columns.map((column) => {
+    if (column.lobostatsType !== 'number') {
+      return column.lobostatsType === 'date' ? ('date' as const) : ('text' as const);
+    }
+    try {
+      for (const row of snapshot.rows) {
+        const value = row[column.name];
+        if (!isSafelyRepresentableMysqlNumber(value)) throw new Error('Unsafe numeric value');
+        normalizeCell(value, 'number', '.');
+      }
+      return 'number' as const;
+    } catch {
+      // Preserve BIGINT and exact DECIMAL values that JavaScript cannot represent safely.
+      return 'text' as const;
+    }
+  });
+  const columns = snapshot.columns.map((column, index) => ({
+    key: `c${index + 1}`,
+    name: column.name,
+    data_type: columnTypes[index],
+  }));
+  const rows = snapshot.rows.map((sourceRow) =>
+    Object.fromEntries(
+      columns.map((column, index) => [
+        column.key,
+        normalizeCell(sourceRow[snapshot.columns[index].name], column.data_type, '.'),
+      ]),
+    ),
+  );
+  return { columns, rows };
+}
+
+function isSafelyRepresentableMysqlNumber(value: unknown): boolean {
+  if (value === null || value === undefined) return true;
+  if (typeof value === 'number') {
+    return Number.isFinite(value) && (!Number.isInteger(value) || Number.isSafeInteger(value));
+  }
+  if (typeof value !== 'string') return false;
+  const trimmed = value.trim();
+  if (/^[+-]?\d+$/.test(trimmed)) return Number.isSafeInteger(Number(trimmed));
+  const significantDigits = trimmed
+    .split(/[eE]/, 1)[0]
+    .replace(/^[+-]/, '')
+    .replace('.', '')
+    .replace(/^0+/, '')
+    .replace(/0+$/, '').length;
+  return significantDigits <= 15;
 }
 
 export function normalizeCell(

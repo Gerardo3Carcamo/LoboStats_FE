@@ -18,6 +18,8 @@ export interface Dataset extends DatasetPayload {
   id: number;
   owner_email: string;
   row_count: number;
+  revision: number;
+  content_sha256: string;
   created_at: string;
   updated_at: string;
 }

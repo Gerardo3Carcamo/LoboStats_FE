@@ -1,10 +1,16 @@
 import { computed, DestroyRef, inject, Injectable, InjectionToken, signal } from '@angular/core';
 
-const SUPPORTED_PROTOCOL_VERSIONS = new Set(['2', '3']);
+import { AgentMysqlColumn, AgentMysqlSnapshot } from '../../models/agent-import';
+
+const SUPPORTED_PROTOCOL_VERSIONS = new Set(['2', '3', '4']);
 const REQUEST_TIMEOUT_MS = 5_000;
+const SNAPSHOT_TIMEOUT_MS = 45_000;
 const POLL_INTERVAL_MS = 2_000;
 const MAX_PAIR_DURATION_MS = 15 * 60 * 1000;
 const MAX_SESSION_DURATION_MS = 30 * 60 * 1000;
+const MAX_SNAPSHOT_COLUMNS = 500;
+const MAX_SNAPSHOT_ROWS = 100_000;
+const MAX_SNAPSHOT_CELLS = 1_000_000;
 
 type AgentFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
@@ -56,6 +62,9 @@ interface AgentSessionView {
     | 'mysql_columns_ready'
     | 'mysql_preview_running'
     | 'mysql_preview_ready'
+    | 'mysql_snapshot_ready'
+    | 'mysql_snapshot_transferring'
+    | 'mysql_snapshot_transferred'
     | 'agent_ui_complete';
   createdAt: string;
   expiresAt: string;
@@ -111,8 +120,8 @@ export class AgentApiService {
     this.destroyRef.onDestroy(() => void this.cancel(false));
   }
 
-  async pair(openAgentUi: (url: string) => void): Promise<void> {
-    if (this.busy()) return;
+  async pair(openAgentUi: (url: string) => void): Promise<AgentMysqlSnapshot | null> {
+    if (this.busy()) return null;
 
     const operation: PairingOperation = {
       id: (this.nextOperationId += 1),
@@ -126,7 +135,7 @@ export class AgentApiService {
       if (!SUPPORTED_PROTOCOL_VERSIONS.has(status.protocolVersion)) {
         throw new AgentClientError(
           'incompatible',
-          `El agente usa el protocolo ${status.protocolVersion}; LoboStats requiere la versión 2 o 3`,
+          `El agente usa el protocolo ${status.protocolVersion}; LoboStats requiere la versión 2, 3 o 4`,
         );
       }
 
@@ -140,11 +149,26 @@ export class AgentApiService {
         'Completa la verificación en la ventana del agente local',
         status.version,
       );
-      await this.waitUntilClaimed(session, status.protocolVersion, operation.controller.signal);
+      const readyStatus = await this.waitUntilReady(
+        session,
+        status.protocolVersion,
+        operation.controller.signal,
+      );
+      const snapshot =
+        readyStatus === 'mysql_snapshot_ready'
+          ? await this.downloadSnapshot(session, operation.controller.signal)
+          : null;
       await this.releaseSession(operation, 'complete');
       if (this.currentOperation === operation) {
-        this.setState('verified', 'LoboStats Agent fue verificado correctamente', status.version);
+        this.setState(
+          'verified',
+          snapshot
+            ? `${snapshot.rows.length.toLocaleString('es-MX')} filas recibidas desde MySQL`
+            : 'LoboStats Agent fue verificado correctamente',
+          status.version,
+        );
       }
+      return snapshot;
     } catch (error) {
       const normalized = this.normalizeError(error, operation.cancelRequested);
       await this.releaseSession(operation, 'cancel');
@@ -204,11 +228,11 @@ export class AgentApiService {
     return payload;
   }
 
-  private async waitUntilClaimed(
+  private async waitUntilReady(
     session: AgentSessionResponse,
     protocolVersion: string,
     signal: AbortSignal,
-  ): Promise<void> {
+  ): Promise<'agent_ui_complete' | 'mysql_snapshot_ready'> {
     const deadline = Math.min(Date.parse(session.expiresAt), Date.now() + MAX_PAIR_DURATION_MS);
     while (Date.now() < deadline) {
       if (signal.aborted) {
@@ -238,7 +262,8 @@ export class AgentApiService {
       if (!isAgentSessionState(payload, session.id, protocolVersion)) {
         throw new AgentClientError('incompatible', 'El estado devuelto por el agente no es válido');
       }
-      if (payload.status === 'agent_ui_complete') return;
+      if (payload.status === 'agent_ui_complete') return payload.status;
+      if (payload.status === 'mysql_snapshot_ready') return payload.status;
       if (payload.status === 'agent_ui_claimed') {
         this.setState(
           'waiting-for-agent',
@@ -284,13 +309,59 @@ export class AgentApiService {
       } else if (payload.status === 'mysql_preview_ready') {
         this.setState(
           'waiting-for-agent',
-          'Revisa la vista previa y finaliza el auxiliar',
+          protocolVersion === '4'
+            ? 'Revisa la vista previa y confirma la importación'
+            : 'Revisa la vista previa y finaliza el auxiliar',
+          this.stateSignal().agentVersion,
+        );
+      } else if (payload.status === 'mysql_snapshot_transferring') {
+        this.setState(
+          'waiting-for-agent',
+          'El agente está transfiriendo el snapshot MySQL...',
           this.stateSignal().agentVersion,
         );
       }
       await wait(POLL_INTERVAL_MS, signal);
     }
     throw new AgentClientError('error', 'La verificación tardó demasiado. Inténtalo de nuevo');
+  }
+
+  private async downloadSnapshot(
+    session: AgentSessionResponse,
+    signal: AbortSignal,
+  ): Promise<AgentMysqlSnapshot> {
+    this.setState(
+      'waiting-for-agent',
+      'Transfiriendo el snapshot MySQL a la hoja...',
+      this.stateSignal().agentVersion,
+    );
+    const response = await this.request(
+      `/v1/import-sessions/${encodeURIComponent(session.id)}/mysql/snapshot`,
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.token}` },
+      },
+      signal,
+      SNAPSHOT_TIMEOUT_MS,
+    );
+    if (!response.ok) {
+      throw new AgentClientError(
+        'error',
+        await readAgentError(response, 'No se pudo importar MySQL'),
+      );
+    }
+    const payload: unknown = await response.json();
+    if (!isMysqlSnapshotResponse(payload, session.id)) {
+      throw new AgentClientError('incompatible', 'El snapshot devuelto por el agente no es válido');
+    }
+    return {
+      source: payload.source,
+      columns: payload.columns,
+      rows: payload.rows,
+      limit: payload.limit,
+      truncated: payload.truncated,
+      queryDurationMs: payload.queryDurationMs,
+    };
   }
 
   private async releaseSession(
@@ -322,9 +393,10 @@ export class AgentApiService {
     path: string,
     init: RequestInit,
     flowSignal: AbortSignal | undefined,
+    timeoutMs = REQUEST_TIMEOUT_MS,
   ): Promise<Response> {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
     const abort = (): void => controller.abort();
     flowSignal?.addEventListener('abort', abort, { once: true });
     if (flowSignal?.aborted) controller.abort();
@@ -403,7 +475,7 @@ function isAgentSession(value: unknown, baseUrl: string): value is AgentSessionR
 function isAgentSessionState(
   value: unknown,
   expectedId?: string,
-  protocolVersion = '3',
+  protocolVersion = '4',
 ): value is AgentSessionView {
   if (!value || typeof value !== 'object') return false;
   const session = value as Partial<AgentSessionView>;
@@ -424,13 +496,125 @@ function isAgentSessionState(
       session.status === 'mysql_connecting' ||
       session.status === 'mysql_objects_ready' ||
       session.status === 'agent_ui_complete' ||
-      (protocolVersion === '3' &&
+      (['3', '4'].includes(protocolVersion) &&
         (session.status === 'mysql_object_selected' ||
           session.status === 'mysql_columns_loading' ||
           session.status === 'mysql_columns_ready' ||
           session.status === 'mysql_preview_running' ||
-          session.status === 'mysql_preview_ready')))
+          session.status === 'mysql_preview_ready')) ||
+      (protocolVersion === '4' &&
+        (session.status === 'mysql_snapshot_ready' ||
+          session.status === 'mysql_snapshot_transferring' ||
+          session.status === 'mysql_snapshot_transferred')))
   );
+}
+
+interface AgentMysqlSnapshotResponse extends AgentMysqlSnapshot {
+  session: AgentSessionView;
+}
+
+function isMysqlSnapshotResponse(
+  value: unknown,
+  expectedSessionId: string,
+): value is AgentMysqlSnapshotResponse {
+  if (!value || typeof value !== 'object') return false;
+  const snapshot = value as Partial<AgentMysqlSnapshotResponse>;
+  if (
+    !isAgentSessionState(snapshot.session, expectedSessionId, '4') ||
+    snapshot.session.status !== 'mysql_snapshot_transferred' ||
+    !isSnapshotSource(snapshot.source) ||
+    !Array.isArray(snapshot.columns) ||
+    snapshot.columns.length < 1 ||
+    snapshot.columns.length > MAX_SNAPSHOT_COLUMNS ||
+    !Array.isArray(snapshot.rows) ||
+    snapshot.rows.length > MAX_SNAPSHOT_ROWS ||
+    snapshot.rows.length * snapshot.columns.length > MAX_SNAPSHOT_CELLS ||
+    !Number.isSafeInteger(snapshot.limit) ||
+    Number(snapshot.limit) < 1 ||
+    Number(snapshot.limit) > MAX_SNAPSHOT_ROWS ||
+    snapshot.rows.length > Number(snapshot.limit) ||
+    typeof snapshot.truncated !== 'boolean' ||
+    !Number.isSafeInteger(snapshot.queryDurationMs) ||
+    Number(snapshot.queryDurationMs) < 0
+  ) {
+    return false;
+  }
+
+  const names = new Set<string>();
+  for (const column of snapshot.columns) {
+    if (
+      !isMysqlColumn(column) ||
+      names.has(column.name) ||
+      column.lobostatsType === 'unsupported'
+    ) {
+      return false;
+    }
+    names.add(column.name);
+  }
+  return snapshot.rows.every((row) => isSnapshotRow(row, names));
+}
+
+function isSnapshotSource(value: unknown): value is AgentMysqlSnapshot['source'] {
+  if (!value || typeof value !== 'object') return false;
+  const source = value as Partial<AgentMysqlSnapshot['source']>;
+  const object = source.object;
+  return (
+    typeof source.database === 'string' &&
+    source.database.length >= 1 &&
+    source.database.length <= 64 &&
+    !!object &&
+    typeof object.name === 'string' &&
+    object.name.length >= 1 &&
+    object.name.length <= 64 &&
+    (object.type === 'table' || object.type === 'view')
+  );
+}
+
+function isMysqlColumn(value: unknown): value is AgentMysqlColumn {
+  if (!value || typeof value !== 'object') return false;
+  const column = value as Partial<AgentMysqlColumn>;
+  return (
+    typeof column.name === 'string' &&
+    column.name.length >= 1 &&
+    column.name.length <= 64 &&
+    typeof column.mysqlType === 'string' &&
+    column.mysqlType.length >= 1 &&
+    ['number', 'text', 'date', 'boolean', 'unsupported'].includes(column.lobostatsType ?? '') &&
+    typeof column.nullable === 'boolean' &&
+    typeof column.primaryKey === 'boolean' &&
+    Number.isSafeInteger(column.ordinalPosition) &&
+    Number(column.ordinalPosition) >= 1
+  );
+}
+
+function isSnapshotRow(value: unknown, columns: ReadonlySet<string>): boolean {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const row = value as Record<string, unknown>;
+  const keys = Object.keys(row);
+  return (
+    keys.length === columns.size &&
+    keys.every((key) => columns.has(key)) &&
+    Object.values(row).every(
+      (cell) =>
+        cell === null ||
+        typeof cell === 'string' ||
+        typeof cell === 'boolean' ||
+        (typeof cell === 'number' && Number.isFinite(cell)),
+    )
+  );
+}
+
+async function readAgentError(response: Response, fallback: string): Promise<string> {
+  try {
+    const payload: unknown = await response.json();
+    if (payload && typeof payload === 'object' && 'message' in payload) {
+      const message = (payload as { message?: unknown }).message;
+      if (typeof message === 'string' && message.length <= 300) return message;
+    }
+  } catch {
+    // Use the stable fallback when the response is not JSON.
+  }
+  return fallback;
 }
 
 function isUuid(value: string): boolean {

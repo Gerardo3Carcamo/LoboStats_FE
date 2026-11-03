@@ -1,6 +1,6 @@
 import type { DriveStep } from 'driver.js';
 
-export const WORKSHEET_TOUR_REVISION = '2026.10.1';
+export const WORKSHEET_TOUR_REVISION = '2026.11.1';
 
 export const WORKSHEET_TOUR_TARGETS = {
   datasetName: 'dataset-name',
@@ -51,7 +51,7 @@ export const WORKSHEET_TOUR_STEPS: DriveStep[] = [
     popover: {
       title: 'Verifica el agente local',
       description:
-        'Empareja el agente local. Con la versión actualizada puedes seleccionar datos MySQL y revisar una vista previa sin persistir tokens.',
+        'Empareja el agente local para seleccionar datos MySQL, revisar una vista previa e importar la selección sin persistir credenciales.',
       side: 'bottom',
       align: 'center',
     },

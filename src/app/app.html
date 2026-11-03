@@ -16,7 +16,12 @@
           <p>{{ group.label }}</p>
           @for (item of group.items; track item.badge) {
             @if (item.available) {
-              <a class="nav-item active" href="/" aria-current="page">
+              <a
+                class="nav-item"
+                [routerLink]="item.path"
+                routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }"
+              >
                 <span>{{ item.badge }}</span>
                 {{ item.label }}
               </a>
@@ -42,7 +47,7 @@
     <header class="topbar">
       <div>
         <p class="eyebrow">Universidad Autónoma de Coahuila</p>
-        <h1>Hoja de trabajo</h1>
+        <h1>Laboratorio de datos</h1>
       </div>
       <div class="topbar-actions">
         <button class="help-button" type="button" (click)="startTour($event)">
