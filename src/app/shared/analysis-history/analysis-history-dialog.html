@@ -1,0 +1,100 @@
+<dialog #dialog class="history-dialog" aria-labelledby="history-dialog-title" (close)="onClose()">
+  <header>
+    <div>
+      <h2 id="history-dialog-title">{{ title() }}</h2>
+      <p>Recupera configuraciones y resultados guardados en este espacio.</p>
+    </div>
+    <button class="close-button" type="button" aria-label="Cerrar bitácora" (click)="close()">
+      ×
+    </button>
+  </header>
+
+  <div class="history-tools">
+    <label>
+      <span class="sr-only">Buscar en la bitácora</span>
+      <input
+        #searchInput
+        type="search"
+        placeholder="Buscar fórmula, variable o resultado"
+        [value]="search()"
+        (input)="updateSearch($event)"
+      />
+    </label>
+    @if (filters().length > 2) {
+      <div class="history-filters" aria-label="Filtrar cálculos">
+        @for (item of filters(); track item.key) {
+          <button
+            type="button"
+            [class.active]="filter() === item.key"
+            [attr.aria-pressed]="filter() === item.key"
+            (click)="setFilter(item.key)"
+          >
+            {{ item.label }}
+          </button>
+        }
+      </div>
+    }
+  </div>
+
+  <div class="history-content">
+    @if (loading() && !items().length) {
+      <p class="history-message" role="status">Cargando análisis…</p>
+    } @else if (error()) {
+      <div class="history-empty" role="alert">
+        <strong>No se pudo abrir la bitácora</strong>
+        <p>{{ error() }}</p>
+      </div>
+    } @else if (!groups().length) {
+      <div class="history-empty">
+        <strong>No hay análisis que coincidan</strong>
+        <p>Cambia el filtro o ejecuta un análisis nuevo.</p>
+      </div>
+    } @else {
+      @for (group of groups(); track group.label) {
+        <section class="history-group" [attr.aria-labelledby]="'history-' + $index">
+          <h3 [id]="'history-' + $index">{{ group.label }}</h3>
+          <ol>
+            @for (item of group.items; track item.id) {
+              <li>
+                <button
+                  type="button"
+                  [class.active]="activeId() === item.id"
+                  [attr.aria-current]="activeId() === item.id ? 'true' : null"
+                  (click)="choose(item)"
+                >
+                  <span class="history-row-head">
+                    <strong>{{ item.presentation.title }}</strong>
+                    <small>{{ item.presentation.module }}</small>
+                  </span>
+                  <span class="history-detail">{{ item.presentation.detail }}</span>
+                  <span class="history-meta">
+                    <b>{{ item.presentation.result }}</b>
+                    <span>{{ formatTime(item.created_at) }}</span>
+                    @if (item.is_stale) {
+                      <span>Revisión anterior</span>
+                    }
+                  </span>
+                  @if (item.presentation.tags.length) {
+                    <span class="history-tags">
+                      @for (tag of item.presentation.tags; track tag) {
+                        <span>{{ tag }}</span>
+                      }
+                    </span>
+                  }
+                </button>
+              </li>
+            }
+          </ol>
+        </section>
+      }
+    }
+  </div>
+
+  @if (hasMore()) {
+    <footer>
+      <button type="button" [disabled]="loadingMore()" (click)="loadMore()">
+        {{ loadingMore() ? 'Cargando…' : 'Cargar análisis anteriores' }}
+      </button>
+    </footer>
+  }
+</dialog>

@@ -85,25 +85,25 @@ export class Worksheet {
     this.setStatus(kind, state.message);
   });
   protected readonly localeText = {
-    noRowsToShow: 'No hay datos para mostrar',
+    noRowsToShow: 'Importa un archivo, pega una tabla o agrega una fila para comenzar',
     ariaInputEditor: 'Editor de celda',
     ariaLabelCellEditor: 'Editor de celda',
     ariaLabelColumnMenu: 'Menú de columna',
     ariaLabelColumnFilter: 'Filtro de columna',
   };
   protected readonly theme = themeQuartz.withParams({
-    accentColor: '#2f6548',
-    backgroundColor: '#fffdf8',
-    borderColor: '#dedbd1',
+    accentColor: '#1f6848',
+    backgroundColor: '#ffffff',
+    borderColor: '#cfd8d1',
     browserColorScheme: 'light',
-    fontFamily: 'Inter, Arial, sans-serif',
+    fontFamily: 'Source Sans 3, Segoe UI, Arial, sans-serif',
     fontSize: 13,
     foregroundColor: '#20251f',
-    headerBackgroundColor: '#f1efe7',
+    headerBackgroundColor: '#eef4ef',
     headerFontSize: 11,
     headerTextColor: '#62685f',
-    oddRowBackgroundColor: '#faf9f4',
-    rowBorder: { color: '#ebe8df' },
+    oddRowBackgroundColor: '#f8fbf8',
+    rowBorder: { color: '#e2e9e3' },
     spacing: 7,
   });
   protected readonly columnDefs = computed<ColDef[]>(() => [

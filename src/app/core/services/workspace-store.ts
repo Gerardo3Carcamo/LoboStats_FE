@@ -99,6 +99,39 @@ export class WorkspaceStore {
     this.dirty.set(true);
   }
 
+  addComputedColumn(name: string, values: (number | null)[]): DatasetColumn {
+    const trimmedName = name.trim();
+    if (!trimmedName) throw new Error('Escribe un nombre para la columna calculada');
+    if (trimmedName.length > 120) throw new Error('El nombre no puede superar 120 caracteres');
+    if (this.columns().some((column) => column.name.toLowerCase() === trimmedName.toLowerCase())) {
+      throw new Error('Ya existe una columna con ese nombre');
+    }
+
+    const baseKey =
+      `calc_${trimmedName}`
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9_-]+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        .slice(0, 68) || 'calc_resultado';
+    const keys = new Set(this.columns().map((column) => column.key));
+    let key = baseKey;
+    let suffix = 2;
+    while (keys.has(key)) {
+      key = `${baseKey.slice(0, 75)}_${suffix}`;
+      suffix += 1;
+    }
+
+    const column: DatasetColumn = { key, name: trimmedName, data_type: 'number' };
+    this.columns.update((columns) => [...columns, column]);
+    this.rows.update((rows) =>
+      rows.map((row, index) => ({ ...row, [key]: values[index] ?? null })),
+    );
+    this.dirty.set(true);
+    return column;
+  }
+
   rename(name: string): void {
     this.name.set(name);
     this.dirty.set(true);

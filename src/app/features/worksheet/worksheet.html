@@ -23,7 +23,7 @@
 <section class="workspace-grid">
   <article class="sheet-card">
     <div class="toolbar">
-      <div class="toolbar-actions">
+      <div class="toolbar-actions" aria-label="Opciones para importar datos">
         <label
           class="button primary"
           for="dataset-file"
@@ -42,7 +42,7 @@
           />
           <span aria-hidden="true">+</span> {{ importing() ? 'Leyendo...' : 'Importar datos' }}
         </label>
-        <span class="secondary-actions">
+        <span class="import-actions">
           <button
             class="button"
             type="button"
@@ -59,22 +59,24 @@
             [attr.aria-busy]="agentBusy()"
             (click)="handleAgentAction($event)"
           >
-            <span class="agent-mark" aria-hidden="true">DB</span>
-            {{ agentBusy() ? 'Cancelar conexión' : 'Comprobar agente' }}
+            <span class="agent-mark" aria-hidden="true">SQL</span>
+            {{ agentBusy() ? 'Cancelar importación' : 'Importar desde MySQL' }}
           </button>
-          <button class="button quiet" type="button" (click)="addRow()">Agregar fila</button>
         </span>
       </div>
-      <button
-        class="button save"
-        data-tour="save-data"
-        type="button"
-        [disabled]="saving()"
-        [attr.aria-busy]="saving()"
-        (click)="save()"
-      >
-        {{ saving() ? 'Guardando...' : 'Guardar' }}
-      </button>
+      <div class="workspace-actions" aria-label="Opciones de la hoja">
+        <button class="button quiet" type="button" (click)="addRow()">Agregar fila</button>
+        <button
+          class="button save"
+          data-tour="save-data"
+          type="button"
+          [disabled]="saving()"
+          [attr.aria-busy]="saving()"
+          (click)="save()"
+        >
+          {{ saving() ? 'Guardando...' : 'Guardar hoja' }}
+        </button>
+      </div>
     </div>
 
     <h2 class="sr-only">Datos del conjunto activo</h2>
@@ -103,8 +105,10 @@
   </article>
 
   <aside class="context-panel" data-tour="workspace-context">
-    <div class="context-number" aria-hidden="true">01</div>
-    <p class="section-label">Punto de partida</p>
+    <div class="context-plot" aria-hidden="true">
+      <span></span><span></span><span></span><span></span><span></span>
+    </div>
+    <p class="section-label">Antes de analizar</p>
     <h2>Construye tu conjunto de datos</h2>
     <p>
       Si tu archivo incluye encabezados, usa la primera fila como nombres de variables. Antes de
@@ -114,8 +118,8 @@
     <div class="tip">
       <span aria-hidden="true">i</span>
       <p>
-        <strong>Consejo</strong>Una observación por fila y una variable por columna produce mejores
-        análisis.
+        <strong>Organiza la hoja</strong>Una observación por fila y una variable por columna produce
+        mejores análisis.
       </p>
     </div>
 

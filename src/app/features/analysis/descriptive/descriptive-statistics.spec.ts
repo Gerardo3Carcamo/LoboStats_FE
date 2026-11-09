@@ -8,6 +8,7 @@ import { WorkspaceStore } from '../../../core/services/workspace-store';
 import { AnalysisRun, DescriptiveResult } from '../../../models/analysis';
 import { Dataset } from '../../../models/dataset';
 import { DescriptiveStatistics } from './descriptive-statistics';
+import { DESCRIPTIVE_TOUR_TARGETS } from './descriptive-statistics-tour';
 
 describe('DescriptiveStatistics', () => {
   let fixture: ComponentFixture<DescriptiveStatistics>;
@@ -67,6 +68,28 @@ describe('DescriptiveStatistics', () => {
     expect(fixture.nativeElement.textContent).toContain('1.5');
     expect(store.filledRows()).toEqual([{ c1: 1 }, { c1: 2 }]);
   });
+
+  it('renders every target required by the guided tour', () => {
+    const root = fixture.nativeElement as HTMLElement;
+
+    for (const target of Object.values(DESCRIPTIVE_TOUR_TARGETS)) {
+      expect(root.querySelector(`[data-tour="${target}"]`))
+        .withContext(`Missing data-tour target: ${target}`)
+        .not.toBeNull();
+    }
+  });
+
+  it('sends configurable percentiles as probabilities', async () => {
+    const input = fixture.nativeElement.querySelector('#percentiles') as HTMLInputElement;
+    input.value = '10, 50, 90';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    (fixture.nativeElement.querySelector('.run-button') as HTMLButtonElement).click();
+    await fixture.whenStable();
+
+    expect(analysisApi.descriptive.calls.mostRecent().args[1].percentiles).toEqual([0.1, 0.5, 0.9]);
+  });
 });
 
 function descriptiveRun(): AnalysisRun<DescriptiveResult> {
@@ -77,7 +100,7 @@ function descriptiveRun(): AnalysisRun<DescriptiveResult> {
     dataset_sha256: 'a'.repeat(64),
     analysis_type: 'descriptive',
     status: 'completed',
-    engine_version: 'descriptive-1.0',
+    engine_version: 'descriptive-2.0',
     parameters: {},
     warnings: [],
     created_at: '2026-11-02T12:00:00Z',
@@ -111,11 +134,15 @@ function descriptiveRun(): AnalysisRun<DescriptiveResult> {
               total_count: 2,
               valid_count: 2,
               missing_count: 0,
+              missing_percentage: 0,
               categorical: null,
               date: null,
               numeric: {
                 mean: 1.5,
                 median: 1.5,
+                trimmed_mean: 1.5,
+                mad: 0.5,
+                geometric_mean: Math.sqrt(2),
                 modes: [],
                 mode_frequency: null,
                 variance: 0.5,
@@ -134,6 +161,9 @@ function descriptiveRun(): AnalysisRun<DescriptiveResult> {
                 kurtosis_excess: null,
                 percentiles: { p25: 1, p50: 1.5, p75: 2 },
                 confidence_interval_mean: { level: 0.95, lower: -4.85, upper: 7.85 },
+                confidence_interval_median: { level: 0.95, lower: 1, upper: 2 },
+                confidence_interval_std_dev: { level: 0.95, lower: 0.32, upper: 22.5 },
+                normality: null,
                 histogram: { counts: [1, 0, 0, 1], edges: [1, 1.25, 1.5, 1.75, 2] },
                 boxplot: {
                   lower_whisker: 1,
@@ -142,13 +172,22 @@ function descriptiveRun(): AnalysisRun<DescriptiveResult> {
                   q3: 2,
                   upper_whisker: 2,
                   outliers: [],
+                  outlier_details: [],
                 },
                 qq_plot: { theoretical: [-0.5, 0.5], observed: [1, 2] },
+                ecdf: { values: [1, 2], probabilities: [0.5, 1] },
               },
             },
           ],
         },
       ],
+      missingness: {
+        row_count: 2,
+        complete_rows: 2,
+        incomplete_rows: 0,
+        incomplete_percentage: 0,
+        columns: [{ key: 'c1', name: 'Medición', missing_count: 0, missing_percentage: 0 }],
+      },
       guidance: ['La desviación estándar usa n - 1.'],
     },
   };

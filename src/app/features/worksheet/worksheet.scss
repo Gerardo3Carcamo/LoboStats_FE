@@ -12,11 +12,9 @@
 .section-label {
   color: var(--muted);
   display: block;
-  font-size: 0.75rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
+  font-size: 0.78rem;
+  font-weight: 650;
   margin: 0 0 7px;
-  text-transform: uppercase;
 }
 
 .dataset-name {
@@ -59,9 +57,9 @@
 
 .sheet-card,
 .context-panel {
-  background: #fffdf8;
+  background: var(--surface);
   border: 1px solid var(--line);
-  box-shadow: 0 16px 45px rgb(41 49 40 / 6%);
+  box-shadow: 0 12px 34px rgb(23 37 29 / 5%);
 }
 
 .sheet-card {
@@ -83,9 +81,14 @@
   gap: 7px;
 }
 
-.secondary-actions {
+.import-actions,
+.workspace-actions {
   display: flex;
   gap: 7px;
+}
+
+.workspace-actions {
+  margin-left: 12px;
 }
 
 .button {
@@ -137,8 +140,8 @@
   }
 
   &.agent-button {
-    background: #fbf4df;
-    border-color: #8c6b1f;
+    background: var(--data-blue-soft);
+    border-color: #93acd0;
   }
 
   &.save {
@@ -151,9 +154,9 @@
 }
 
 .agent-mark {
-  color: #765b18;
-  font-family: var(--font-mono);
+  color: var(--data-blue);
   font-size: 0.62rem;
+  font-weight: 800;
 }
 
 .file-input {
@@ -235,15 +238,45 @@
   }
 }
 
-.context-number {
-  color: #f1eee4;
-  font-family: var(--font-display);
-  font-size: 6rem;
-  font-weight: 800;
-  line-height: 1;
-  position: absolute;
-  right: -7px;
-  top: -14px;
+.context-plot {
+  align-items: end;
+  display: flex;
+  gap: 5px;
+  height: 48px;
+  margin-bottom: 20px;
+  position: relative;
+  width: 100%;
+
+  &::after {
+    border-bottom: 1px solid var(--line);
+    bottom: 0;
+    content: '';
+    left: 0;
+    position: absolute;
+    right: 0;
+  }
+
+  span {
+    background: var(--data-blue-soft);
+    border-top: 2px solid var(--data-blue);
+    flex: 1;
+
+    &:nth-child(1) {
+      height: 24%;
+    }
+    &:nth-child(2) {
+      height: 52%;
+    }
+    &:nth-child(3) {
+      height: 88%;
+    }
+    &:nth-child(4) {
+      height: 66%;
+    }
+    &:nth-child(5) {
+      height: 35%;
+    }
+  }
 }
 
 .tip {
@@ -301,8 +334,6 @@
   small {
     color: var(--muted);
     font-size: 0.7rem;
-    letter-spacing: 0.09em;
-    text-transform: uppercase;
   }
 
   strong {
@@ -361,8 +392,13 @@
     flex-wrap: wrap;
   }
 
-  .secondary-actions {
+  .import-actions,
+  .workspace-actions {
     flex-wrap: wrap;
+  }
+
+  .workspace-actions {
+    margin-left: 0;
   }
 
   .button {

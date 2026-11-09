@@ -1,7 +1,16 @@
 import { DOCUMENT } from '@angular/common';
 import { inject, Injectable } from '@angular/core';
 import { driver } from 'driver.js';
-import type { Driver, PopoverDOM } from 'driver.js';
+import type { DriveStep, Driver, PopoverDOM } from 'driver.js';
+
+import {
+  DESCRIPTIVE_TOUR_REVISION,
+  DESCRIPTIVE_TOUR_STEPS,
+} from '../../features/analysis/descriptive/descriptive-statistics-tour';
+import {
+  PROBABILITY_TOUR_REVISION,
+  PROBABILITY_TOUR_STEPS,
+} from '../../features/analysis/probability/probability-tour';
 
 import {
   WORKSHEET_TOUR_REVISION,
@@ -14,6 +23,18 @@ export class ProductTourService {
   private activeTour?: Driver;
 
   startWorksheetTour(trigger: HTMLElement): void {
+    this.startTour(trigger, WORKSHEET_TOUR_STEPS, WORKSHEET_TOUR_REVISION);
+  }
+
+  startDescriptiveTour(trigger: HTMLElement): void {
+    this.startTour(trigger, DESCRIPTIVE_TOUR_STEPS, DESCRIPTIVE_TOUR_REVISION);
+  }
+
+  startProbabilityTour(trigger: HTMLElement): void {
+    this.startTour(trigger, PROBABILITY_TOUR_STEPS, PROBABILITY_TOUR_REVISION);
+  }
+
+  private startTour(trigger: HTMLElement, steps: DriveStep[], revision: string): void {
     if (this.activeTour?.isActive()) return;
     this.activeTour = undefined;
 
@@ -32,7 +53,7 @@ export class ProductTourService {
     };
 
     tour = driver({
-      steps: WORKSHEET_TOUR_STEPS,
+      steps,
       animate: !reduceMotion,
       duration: reduceMotion ? 0 : 220,
       allowClose: true,
@@ -55,7 +76,7 @@ export class ProductTourService {
       skipMissingElement: true,
       onPopoverRender: (popover, options) => {
         if (appRoot) appRoot.inert = true;
-        this.preparePopover(popover, options.index ?? 0);
+        this.preparePopover(popover, options.index ?? 0, revision);
       },
       onDestroyed: cleanup,
     });
@@ -71,11 +92,11 @@ export class ProductTourService {
     }
   }
 
-  private preparePopover(popover: PopoverDOM, index: number): void {
+  private preparePopover(popover: PopoverDOM, index: number, revision: string): void {
     const titleId = `lobostats-tour-title-${index}`;
     const descriptionId = `lobostats-tour-description-${index}`;
 
-    popover.wrapper.dataset['tourRevision'] = WORKSHEET_TOUR_REVISION;
+    popover.wrapper.dataset['tourRevision'] = revision;
     popover.wrapper.setAttribute('role', 'dialog');
     popover.wrapper.setAttribute('aria-modal', 'true');
     popover.wrapper.setAttribute('aria-labelledby', titleId);

@@ -48,11 +48,9 @@
 
 .dialog-label {
   color: var(--green);
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
+  font-size: 0.75rem;
+  font-weight: 650;
   margin: 0;
-  text-transform: uppercase;
 }
 
 .close-button {
@@ -257,9 +255,13 @@ tbody th {
 }
 
 .dialog-footer {
+  background: var(--surface);
   border-top: 1px solid var(--line);
+  bottom: 0;
   gap: 20px;
   padding: 18px 28px 22px;
+  position: sticky;
+  z-index: 2;
 }
 
 .replacement-note {

@@ -52,7 +52,13 @@
                 "input": "public"
               }
             ],
-            "styles": ["node_modules/driver.js/dist/driver.css", "src/styles.scss"]
+            "styles": [
+              "node_modules/@fontsource/source-sans-3/latin.css",
+              "node_modules/@fontsource/source-sans-3/latin-400-italic.css",
+              "node_modules/@fontsource/stix-two-text/latin.css",
+              "node_modules/driver.js/dist/driver.css",
+              "src/styles.scss"
+            ]
           },
           "configurations": {
             "production": {
@@ -64,8 +70,8 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "9kB",
-                  "maximumError": "12kB"
+                  "maximumWarning": "14kB",
+                  "maximumError": "15kB"
                 }
               ],
               "outputHashing": "all"

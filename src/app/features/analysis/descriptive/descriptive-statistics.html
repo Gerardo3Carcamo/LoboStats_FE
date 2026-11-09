@@ -1,50 +1,65 @@
-<section class="analysis-heading">
+<section class="analysis-heading" data-tour="descriptive-introduction">
   <div>
     <p class="section-label">Estadística descriptiva</p>
     <h2>Describe lo que hay en la hoja</h2>
     <p>Resume magnitud, dispersión, forma y valores faltantes sin alterar el conjunto original.</p>
   </div>
-  <a class="back-link" routerLink="/">Volver a la hoja</a>
+  <div class="heading-actions">
+    <button class="tour-button" type="button" (click)="startTour($event)">Ver recorrido</button>
+    <button class="heading-history" type="button" (click)="openHistoryDialog($event)">
+      Bitácora
+    </button>
+    <a class="back-link" routerLink="/">Volver a la hoja</a>
+  </div>
 </section>
 
 <div class="analysis-layout">
   <aside class="configuration-panel" aria-labelledby="configuration-title">
     <h3 id="configuration-title">Configurar análisis</h3>
-    <p class="dataset-reference">
+    <p class="dataset-reference" data-tour="descriptive-dataset">
       <strong>{{ store.name() }}</strong>
       <span>{{ store.filledRows().length }} observaciones · {{ columns().length }} variables</span>
     </p>
 
-    <fieldset>
+    <fieldset data-tour="descriptive-variables">
       <legend>Variables a describir</legend>
-      <div class="variable-list">
-        @for (column of columns(); track column.key) {
-          <label>
-            <input
-              type="checkbox"
-              [checked]="selectedColumns().includes(column.key)"
-              [disabled]="groupBy() === column.key"
-              (change)="toggleColumn(column.key, $any($event.target).checked)"
-            />
-            <span
-              >{{ column.name }}<small>{{ column.data_type }}</small></span
-            >
-          </label>
-        }
-      </div>
+      @if (columns().length) {
+        <div class="variable-list">
+          @for (column of columns(); track column.key) {
+            <label>
+              <input
+                type="checkbox"
+                [checked]="selectedColumns().includes(column.key)"
+                [disabled]="groupBy() === column.key"
+                (change)="toggleColumn(column.key, $any($event.target).checked)"
+              />
+              <span
+                >{{ column.name }}<small>{{ typeLabel(column.data_type) }}</small></span
+              >
+            </label>
+          }
+        </div>
+      } @else {
+        <div class="panel-empty">
+          <p>La hoja todavía no tiene variables.</p>
+          <a routerLink="/">Preparar la hoja</a>
+        </div>
+      }
     </fieldset>
 
-    <label class="field-label" for="group-by">Separar resultados por</label>
-    <select id="group-by" [value]="groupBy() ?? ''" (change)="updateGroupBy($event)">
-      <option value="">Sin agrupación</option>
-      @for (column of columns(); track column.key) {
-        @if (!selectedColumns().includes(column.key)) {
-          <option [value]="column.key">{{ column.name }}</option>
+    <div class="group-field" data-tour="descriptive-grouping">
+      <label class="field-label" for="group-by">Separar resultados por</label>
+      <select id="group-by" [value]="groupBy() ?? ''" (change)="updateGroupBy($event)">
+        <option value="">Sin agrupación</option>
+        @for (column of columns(); track column.key) {
+          @if (!selectedColumns().includes(column.key)) {
+            <option [value]="column.key">{{ column.name }}</option>
+          }
         }
-      }
-    </select>
+      </select>
+    </div>
 
-    <div class="option-grid">
+    <div class="option-grid" data-tour="descriptive-options">
       <label>
         <span>Nivel de confianza</span>
         <input
@@ -69,52 +84,71 @@
       </label>
     </div>
 
-    <button class="run-button" type="button" [disabled]="!canRun()" (click)="analyze()">
+    <label class="percentile-field" for="percentiles">
+      <span>Percentiles a calcular</span>
+      <input
+        id="percentiles"
+        type="text"
+        inputmode="decimal"
+        [value]="percentileInput()"
+        [attr.aria-invalid]="percentileError() ? 'true' : null"
+        [attr.aria-describedby]="percentileError() ? 'percentile-error' : 'percentile-help'"
+        (input)="updatePercentiles($event)"
+      />
+      @if (percentileError(); as error) {
+        <small id="percentile-error" class="field-error">{{ error }}</small>
+      } @else {
+        <small id="percentile-help">Separa hasta 20 porcentajes con comas.</small>
+      }
+    </label>
+
+    <button
+      class="run-button"
+      type="button"
+      data-tour="descriptive-run"
+      [disabled]="!canRun()"
+      (click)="analyze()"
+    >
       {{ running() ? 'Calculando…' : 'Calcular descriptivos' }}
     </button>
+    @if (columns().length && !store.filledRows().length) {
+      <p class="blocking-note">Agrega o importa observaciones para habilitar el análisis.</p>
+    }
     <p class="configuration-note">
       La hoja se guarda como una revisión antes de calcular. Los valores faltantes se excluyen y se
       reportan.
     </p>
-
-    @if (history().length || historyLoading()) {
-      <section class="analysis-history" aria-labelledby="history-title">
-        <h4 id="history-title">Historial descriptivo</h4>
-        @if (historyLoading()) {
-          <p>Cargando resultados…</p>
-        } @else {
-          <ol>
-            @for (item of history(); track item.id) {
-              <li>
-                <button type="button" (click)="openHistory(item)">
-                  <span>Análisis #{{ item.id }}</span>
-                  <small>
-                    revisión {{ item.dataset_revision }}
-                    @if (item.is_stale) {
-                      · anterior
-                    }
-                  </small>
-                </button>
-              </li>
-            }
-          </ol>
-        }
-      </section>
-    }
   </aside>
 
-  <main class="results-panel">
-    <div class="analysis-status" [attr.data-kind]="statusKind()" role="status">
-      <span aria-hidden="true"></span>{{ status() }}
+  <section
+    class="results-panel"
+    data-tour="descriptive-results"
+    aria-label="Resultados del análisis descriptivo"
+  >
+    <div
+      class="analysis-status"
+      [attr.data-kind]="statusKind()"
+      [attr.role]="statusKind() === 'error' ? 'alert' : 'status'"
+    >
+      <span class="status-message">
+        <i aria-hidden="true"></i>
+        <span>{{ status() }}</span>
+      </span>
+      <button type="button" class="history-button" (click)="openHistoryDialog($event)">
+        Bitácora
+      </button>
     </div>
 
     @if (run(); as analysis) {
       <header class="result-header">
         <div>
           <p>Resultado {{ analysis.id }} · revisión {{ analysis.dataset_revision }}</p>
-          <h3>{{ analysis.result.dataset.name }}</h3>
+          <h3 #resultHeading tabindex="-1">{{ analysis.result.dataset.name }}</h3>
         </div>
-        <button type="button" (click)="downloadResult()">Descargar JSON</button>
+        <div class="export-actions">
+          <button type="button" (click)="downloadTable()">Exportar tabla (.csv)</button>
+          <button type="button" (click)="downloadResult()">Exportar evidencia (.json)</button>
+        </div>
       </header>
 
       @if (analysis.is_stale) {
@@ -135,6 +169,30 @@
         </section>
       }
 
+      @if (analysis.result.missingness; as missingness) {
+        <section class="missingness-summary" aria-labelledby="missingness-title">
+          <div>
+            <h4 id="missingness-title">Calidad de los datos seleccionados</h4>
+            <p>
+              <strong>{{ missingness.complete_rows }}</strong> filas completas y
+              <strong>{{ missingness.incomplete_rows }}</strong> con al menos un valor faltante ({{
+                formatNumber(missingness.incomplete_percentage, 1)
+              }}
+              %).
+            </p>
+          </div>
+          <ul>
+            @for (item of missingness.columns; track item.key) {
+              <li>
+                <span>{{ item.name }}</span>
+                <strong>{{ item.missing_count }}</strong>
+                <small>{{ formatNumber(item.missing_percentage, 1) }} %</small>
+              </li>
+            }
+          </ul>
+        </section>
+      }
+
       @for (group of analysis.result.groups; track group.label) {
         <section class="result-group">
           <header>
@@ -147,77 +205,227 @@
               <div class="column-title">
                 <div>
                   <h5>{{ column.name }}</h5>
-                  <span>{{ column.data_type }}</span>
+                  <span>{{ typeLabel(column.data_type) }}</span>
                 </div>
-                <p>{{ column.valid_count }} válidos · {{ column.missing_count }} faltantes</p>
+                <p>
+                  {{ column.valid_count }} válidos · {{ column.missing_count }} faltantes
+                  @if (column.missing_percentage !== undefined) {
+                    ({{ formatNumber(column.missing_percentage, 1) }} %)
+                  }
+                </p>
               </div>
 
               @if (column.numeric; as numeric) {
-                <dl class="metric-grid">
-                  <div>
-                    <dt>Media</dt>
-                    <dd>{{ formatNumber(numeric.mean) }}</dd>
+                <div class="metric-sections">
+                  <section
+                    class="metric-group"
+                    [attr.aria-labelledby]="'center-title-' + column.key"
+                  >
+                    <h6 id="center-title-{{ column.key }}">Centro</h6>
+                    <dl>
+                      <div>
+                        <dt>Media</dt>
+                        <dd>{{ formatNumber(numeric.mean) }}</dd>
+                      </div>
+                      <div>
+                        <dt>Mediana</dt>
+                        <dd>{{ formatNumber(numeric.median) }}</dd>
+                      </div>
+                      <div>
+                        <dt>Moda</dt>
+                        <dd>
+                          {{ numeric.modes.length ? numeric.modes.join(', ') : 'Sin moda' }}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Media recortada 10 %</dt>
+                        <dd>{{ formatNumber(numeric.trimmed_mean) }}</dd>
+                      </div>
+                    </dl>
+                  </section>
+                  <section
+                    class="metric-group"
+                    [attr.aria-labelledby]="'spread-title-' + column.key"
+                  >
+                    <h6 id="spread-title-{{ column.key }}">Dispersión y rango</h6>
+                    <dl>
+                      <div>
+                        <dt>Desv. estándar</dt>
+                        <dd>{{ formatNumber(numeric.std_dev) }}</dd>
+                      </div>
+                      <div>
+                        <dt>Varianza</dt>
+                        <dd>{{ formatNumber(numeric.variance) }}</dd>
+                      </div>
+                      <div>
+                        <dt>Mínimo</dt>
+                        <dd>{{ formatNumber(numeric.minimum) }}</dd>
+                      </div>
+                      <div>
+                        <dt>Q1</dt>
+                        <dd>{{ formatNumber(numeric.q1) }}</dd>
+                      </div>
+                      <div>
+                        <dt>Q3</dt>
+                        <dd>{{ formatNumber(numeric.q3) }}</dd>
+                      </div>
+                      <div>
+                        <dt>Máximo</dt>
+                        <dd>{{ formatNumber(numeric.maximum) }}</dd>
+                      </div>
+                      <div>
+                        <dt>Rango</dt>
+                        <dd>{{ formatNumber(numeric.range) }}</dd>
+                      </div>
+                      <div>
+                        <dt>IQR</dt>
+                        <dd>{{ formatNumber(numeric.iqr) }}</dd>
+                      </div>
+                    </dl>
+                  </section>
+                  <section
+                    class="metric-group"
+                    [attr.aria-labelledby]="'shape-title-' + column.key"
+                  >
+                    <h6 id="shape-title-{{ column.key }}">Forma y precisión</h6>
+                    <dl>
+                      <div>
+                        <dt>Error estándar</dt>
+                        <dd>{{ formatNumber(numeric.std_error) }}</dd>
+                      </div>
+                      <div>
+                        <dt>Asimetría</dt>
+                        <dd>{{ formatNumber(numeric.skewness) }}</dd>
+                      </div>
+                      <div>
+                        <dt>Curtosis</dt>
+                        <dd>{{ formatNumber(numeric.kurtosis_excess) }}</dd>
+                      </div>
+                      <div>
+                        <dt>IC de la media</dt>
+                        <dd>
+                          @if (numeric.confidence_interval_mean; as interval) {
+                            {{ formatNumber(interval.lower) }} — {{ formatNumber(interval.upper) }}
+                          } @else {
+                            —
+                          }
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Coef. de variación</dt>
+                        <dd>{{ formatNumber(numeric.coefficient_of_variation) }} %</dd>
+                      </div>
+                      <div>
+                        <dt>MAD</dt>
+                        <dd>{{ formatNumber(numeric.mad) }}</dd>
+                      </div>
+                    </dl>
+                  </section>
+                </div>
+
+                <details class="extended-metrics">
+                  <summary>Ver medidas e intervalos adicionales</summary>
+                  <div class="extended-grid">
+                    <dl>
+                      <div>
+                        <dt>Suma</dt>
+                        <dd>{{ formatNumber(numeric.sum) }}</dd>
+                      </div>
+                      <div>
+                        <dt>Suma de cuadrados</dt>
+                        <dd>{{ formatNumber(numeric.sum_squares) }}</dd>
+                      </div>
+                      <div>
+                        <dt>Media geométrica</dt>
+                        <dd>{{ formatNumber(numeric.geometric_mean) }}</dd>
+                      </div>
+                      <div>
+                        <dt>Frecuencia de la moda</dt>
+                        <dd>{{ numeric.mode_frequency ?? '—' }}</dd>
+                      </div>
+                    </dl>
+                    <dl>
+                      <div>
+                        <dt>IC de la mediana</dt>
+                        <dd>
+                          @if (numeric.confidence_interval_median; as interval) {
+                            {{ formatNumber(interval.lower) }} — {{ formatNumber(interval.upper) }}
+                          } @else {
+                            —
+                          }
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>IC de la desviación</dt>
+                        <dd>
+                          @if (numeric.confidence_interval_std_dev; as interval) {
+                            {{ formatNumber(interval.lower) }} — {{ formatNumber(interval.upper) }}
+                          } @else {
+                            —
+                          }
+                        </dd>
+                      </div>
+                    </dl>
+                    <div class="percentile-list">
+                      <h6>Percentiles solicitados</h6>
+                      <dl>
+                        @for (percentile of numeric.percentiles | keyvalue; track percentile.key) {
+                          <div>
+                            <dt>{{ percentile.key.toUpperCase() }}</dt>
+                            <dd>{{ formatNumber(percentile.value) }}</dd>
+                          </div>
+                        }
+                      </dl>
+                    </div>
                   </div>
+                </details>
+
+                <section
+                  class="normality-reading"
+                  [attr.data-reject]="numeric.normality?.reject_normality ?? null"
+                >
                   <div>
-                    <dt>Mediana</dt>
-                    <dd>{{ formatNumber(numeric.median) }}</dd>
+                    <h6>Lectura de normalidad</h6>
+                    @if (numeric.normality; as normality) {
+                      <p>{{ normality.interpretation }}</p>
+                    } @else {
+                      <p>
+                        Se requieren al menos 3 valores distintos para ejecutar Anderson–Darling.
+                      </p>
+                    }
                   </div>
-                  <div>
-                    <dt>Desv. estándar</dt>
-                    <dd>{{ formatNumber(numeric.std_dev) }}</dd>
-                  </div>
-                  <div>
-                    <dt>Error estándar</dt>
-                    <dd>{{ formatNumber(numeric.std_error) }}</dd>
-                  </div>
-                  <div>
-                    <dt>Varianza</dt>
-                    <dd>{{ formatNumber(numeric.variance) }}</dd>
-                  </div>
-                  <div>
-                    <dt>Mínimo</dt>
-                    <dd>{{ formatNumber(numeric.minimum) }}</dd>
-                  </div>
-                  <div>
-                    <dt>Q1</dt>
-                    <dd>{{ formatNumber(numeric.q1) }}</dd>
-                  </div>
-                  <div>
-                    <dt>Q3</dt>
-                    <dd>{{ formatNumber(numeric.q3) }}</dd>
-                  </div>
-                  <div>
-                    <dt>Máximo</dt>
-                    <dd>{{ formatNumber(numeric.maximum) }}</dd>
-                  </div>
-                  <div>
-                    <dt>Asimetría</dt>
-                    <dd>{{ formatNumber(numeric.skewness) }}</dd>
-                  </div>
-                  <div>
-                    <dt>Curtosis</dt>
-                    <dd>{{ formatNumber(numeric.kurtosis_excess) }}</dd>
-                  </div>
-                  <div>
-                    <dt>IC de la media</dt>
-                    <dd>
-                      @if (numeric.confidence_interval_mean; as interval) {
-                        {{ formatNumber(interval.lower) }} — {{ formatNumber(interval.upper) }}
-                      } @else {
-                        —
-                      }
-                    </dd>
-                  </div>
-                </dl>
+                  @if (numeric.normality; as normality) {
+                    <dl>
+                      <div>
+                        <dt>A² ajustado</dt>
+                        <dd>{{ formatNumber(normality.adjusted_statistic) }}</dd>
+                      </div>
+                      <div>
+                        <dt>Valor p</dt>
+                        <dd>{{ formatNumber(normality.p_value) }}</dd>
+                      </div>
+                      <div>
+                        <dt>Decisión (α = 0.05)</dt>
+                        <dd>
+                          {{ normality.reject_normality ? 'Cuestionar normalidad' : 'No rechazar' }}
+                        </dd>
+                      </div>
+                    </dl>
+                  }
+                </section>
 
                 <div class="plot-grid">
                   <figure class="histogram-figure">
                     <figcaption>Distribución</figcaption>
-                    <div class="histogram" aria-label="Histograma de {{ column.name }}">
+                    <div class="plot-scale">
+                      <span>{{ formatNumber(histogramMaximum(numeric), 0) }}</span>
+                      <small>frecuencia</small>
+                    </div>
+                    <div class="histogram" aria-hidden="true">
                       @for (count of numeric.histogram.counts; track $index) {
                         <span
                           [style.height.%]="barHeight(numeric, count)"
-                          [attr.title]="count + ' observaciones'"
+                          [attr.title]="histogramBinLabel(numeric, $index, count)"
                         ></span>
                       }
                     </div>
@@ -225,6 +433,11 @@
                       <span>{{ formatNumber(numeric.minimum) }}</span>
                       <span>{{ formatNumber(numeric.maximum) }}</span>
                     </div>
+                    <ul class="sr-only">
+                      @for (count of numeric.histogram.counts; track $index) {
+                        <li>{{ histogramBinLabel(numeric, $index, count) }}</li>
+                      }
+                    </ul>
                   </figure>
 
                   <figure class="box-figure">
@@ -258,6 +471,20 @@
                       <span>{{ formatNumber(numeric.minimum) }}</span>
                       <span>{{ formatNumber(numeric.maximum) }}</span>
                     </div>
+                    <dl class="plot-values">
+                      <div>
+                        <dt>Q1</dt>
+                        <dd>{{ formatNumber(numeric.q1) }}</dd>
+                      </div>
+                      <div>
+                        <dt>Mediana</dt>
+                        <dd>{{ formatNumber(numeric.median) }}</dd>
+                      </div>
+                      <div>
+                        <dt>Q3</dt>
+                        <dd>{{ formatNumber(numeric.q3) }}</dd>
+                      </div>
+                    </dl>
                   </figure>
 
                   <figure class="qq-figure">
@@ -267,6 +494,11 @@
                       role="img"
                       aria-label="Gráfica Q-Q de {{ column.name }}"
                     >
+                      <desc>
+                        Compara cuantiles teóricos normales con valores observados. Los puntos más
+                        cercanos a la diagonal sugieren mayor aproximación a una distribución
+                        normal.
+                      </desc>
                       <line x1="18" y1="182" x2="282" y2="18"></line>
                       @for (value of numeric.qq_plot.observed; track $index) {
                         <circle
@@ -276,8 +508,54 @@
                         ></circle>
                       }
                     </svg>
+                    <div class="qq-axis-labels" aria-hidden="true">
+                      <span>Cuantiles teóricos</span><span>Valores observados</span>
+                    </div>
                   </figure>
+
+                  @if (numeric.ecdf; as ecdf) {
+                    <figure class="ecdf-figure">
+                      <figcaption>Distribución acumulada empírica</figcaption>
+                      <svg viewBox="0 0 300 200" role="img" aria-label="ECDF de {{ column.name }}">
+                        <desc>
+                          Proporción acumulada de observaciones menores o iguales a cada valor.
+                        </desc>
+                        <line x1="18" y1="182" x2="282" y2="182"></line>
+                        <line x1="18" y1="182" x2="18" y2="18"></line>
+                        <path [attr.d]="ecdfPath(ecdf)"></path>
+                      </svg>
+                      <div class="plot-axis">
+                        <span>{{ formatNumber(numeric.minimum) }}</span>
+                        <span>{{ formatNumber(numeric.maximum) }}</span>
+                      </div>
+                    </figure>
+                  }
                 </div>
+
+                @if (numeric.boxplot.outlier_details?.length) {
+                  <section class="outlier-register">
+                    <div>
+                      <h6>Observaciones atípicas</h6>
+                      <p>Identificadas con los límites de Tukey (1.5 × IQR).</p>
+                    </div>
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Fila en la hoja</th>
+                          <th>Valor</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (outlier of numeric.boxplot.outlier_details; track outlier.row) {
+                          <tr>
+                            <td>{{ outlier.row }}</td>
+                            <td>{{ formatNumber(outlier.value) }}</td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </section>
+                }
               } @else if (column.categorical; as categorical) {
                 <div class="categorical-summary">
                   <p>
@@ -338,5 +616,14 @@
         <p>Selecciona variables y ejecuta el análisis. La hoja actual no cambiará.</p>
       </section>
     }
-  </main>
+  </section>
 </div>
+
+<app-analysis-history-dialog
+  #historyDialog
+  [datasetId]="store.datasetId()"
+  analysisType="descriptive"
+  title="Bitácora descriptiva"
+  [activeId]="run()?.id ?? null"
+  (selected)="openHistory($event)"
+/>

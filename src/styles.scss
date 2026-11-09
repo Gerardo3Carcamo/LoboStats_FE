@@ -1,17 +1,22 @@
 :root {
-  --ink: #19231d;
-  --green: #2f6548;
-  --green-soft: #e7f0e8;
-  --gold: #d4a947;
-  --paper: #f4f2eb;
-  --line: #dedbd1;
-  --muted: #686e66;
+  --ink: #17251d;
+  --green: #1f6848;
+  --green-deep: #184d37;
+  --green-soft: #e4f1e8;
+  --data-blue: #315f9f;
+  --data-blue-soft: #e8eef8;
+  --gold: #c89e32;
+  --paper: #f7faf7;
+  --surface: #ffffff;
+  --line: #cfd8d1;
+  --muted: #58665d;
   --focus: #b7791f;
   --danger: #a12b2b;
   --success: #2f6548;
-  --font-display: Georgia, 'Times New Roman', serif;
+  --font-display: 'STIX Two Text', 'Cambria Math', Cambria, serif;
+  --font-ui: 'Source Sans 3', 'Segoe UI', Arial, sans-serif;
   --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
-  font-family: Inter, Avenir, 'Segoe UI', Arial, sans-serif;
+  font-family: var(--font-ui);
   color: var(--ink);
   background: var(--paper);
   font-synthesis: none;
@@ -32,7 +37,9 @@ body {
 }
 
 button,
-input {
+input,
+select,
+textarea {
   font-family: inherit;
 }
 

@@ -1,0 +1,151 @@
+name: Frontend CI/CD
+
+on:
+  push:
+    branches: [develop-tesis]
+  pull_request:
+    branches: [develop-tesis]
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: Desplegar en la Raspberry Pi después del CI
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: Test and build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      CI: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test -- --watch=false --browsers=ChromeHeadless
+
+      - name: Build production bundle
+        run: npm run build -- --configuration production
+
+      - name: Preserve verified bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: lobostats-web-${{ github.sha }}
+          path: dist/lobostats-web/browser
+          if-no-files-found: error
+          retention-days: 7
+
+  deploy:
+    name: Deploy to Raspberry Pi 5
+    needs: ci
+    if: >-
+      github.ref == 'refs/heads/develop-tesis' &&
+      (github.event_name == 'push' ||
+      (github.event_name == 'workflow_dispatch' && inputs.deploy))
+    runs-on: [self-hosted, Linux, ARM64, lobostats-rpi]
+    timeout-minutes: 30
+    concurrency:
+      group: lobostats-frontend-production
+      cancel-in-progress: false
+    environment:
+      name: production
+    env:
+      APP_NAME: lobostats
+      API_PORT: 6100
+      DEPLOY_BRANCH: develop-tesis
+      DEPLOY_SCRIPT: /opt/devops-scripts/Angular/deploy-lobostats.sh
+      DEVOPS_ENV: /opt/devops-scripts/.env
+
+    steps:
+      - name: Checkout the verified commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify Raspberry Pi deployment prerequisites
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          test -r "$DEPLOY_SCRIPT"
+          test -r "$DEVOPS_ENV"
+          for command in git node npm curl jq nginx cloudflared rsync; do
+            command -v "$command" >/dev/null || {
+              echo "Missing command on deployment runner: $command" >&2
+              exit 1
+            }
+          done
+          node -e "const [major, minor] = process.versions.node.split('.').map(Number); if (major < 20 || (major === 20 && minor < 19)) { console.error('Node.js 20.19 or newer is required'); process.exit(1); }"
+          source_repo="$RUNNER_TEMP/lobostats-source-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.git"
+          echo "SOURCE_REPO=$source_repo" >> "$GITHUB_ENV"
+          echo "SOURCE_REPO_URL=file://$source_repo" >> "$GITHUB_ENV"
+
+      - name: Prepare an immutable local Git source
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          git init --bare "$SOURCE_REPO"
+          git -C "$GITHUB_WORKSPACE" push \
+            "$SOURCE_REPO" \
+            "$GITHUB_SHA:refs/heads/$DEPLOY_BRANCH"
+          deployed_sha="$(git --git-dir="$SOURCE_REPO" rev-parse "refs/heads/$DEPLOY_BRANCH")"
+          test "$deployed_sha" = "$GITHUB_SHA"
+
+      - name: Deploy verified branch
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          bash "$DEPLOY_SCRIPT" \
+            "$APP_NAME" \
+            "$SOURCE_REPO_URL" \
+            "$API_PORT" \
+            "$DEPLOY_BRANCH"
+
+      - name: Require a successful public smoke test
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          # shellcheck disable=SC1090
+          source "$DEVOPS_ENV"
+          public_url="https://$APP_NAME.$DOMAIN"
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --retry 10 \
+            --retry-delay 3 \
+            --retry-all-errors \
+            "$public_url" >/dev/null
+          {
+            echo "### Frontend deployed"
+            echo
+            echo "- URL: $public_url"
+            echo "- Commit: \`$GITHUB_SHA\`"
+            echo "- Runner: \`$RUNNER_NAME\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove temporary local Git source
+        if: always()
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          if [[ -n "${SOURCE_REPO:-}" && "$SOURCE_REPO" == "$RUNNER_TEMP"/lobostats-source-* ]]; then
+            rm -rf -- "$SOURCE_REPO"
+          fi

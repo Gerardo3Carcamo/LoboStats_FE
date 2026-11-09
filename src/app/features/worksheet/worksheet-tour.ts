@@ -49,9 +49,9 @@ export const WORKSHEET_TOUR_STEPS: DriveStep[] = [
   {
     element: target(WORKSHEET_TOUR_TARGETS.localAgent),
     popover: {
-      title: 'Verifica el agente local',
+      title: 'Importa desde MySQL',
       description:
-        'Empareja el agente local para seleccionar datos MySQL, revisar una vista previa e importar la selección sin persistir credenciales.',
+        'Conecta LoboStats Agent para elegir datos MySQL, revisar una vista previa e importarlos sin guardar tus credenciales.',
       side: 'bottom',
       align: 'center',
     },

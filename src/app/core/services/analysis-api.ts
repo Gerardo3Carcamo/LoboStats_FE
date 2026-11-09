@@ -1,4 +1,4 @@
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
@@ -7,6 +7,9 @@ import {
   AnalysisRunSummary,
   DescriptiveAnalysisRequest,
   DescriptiveResult,
+  ProbabilityAnalysisRequest,
+  ProbabilityDistributionSpec,
+  ProbabilityResult,
 } from '../../models/analysis';
 
 @Injectable({ providedIn: 'root' })
@@ -28,9 +31,34 @@ export class AnalysisApi {
     );
   }
 
-  list(datasetId: number): Observable<AnalysisRunSummary[]> {
+  probability(
+    datasetId: number,
+    payload: ProbabilityAnalysisRequest,
+  ): Observable<AnalysisRun<ProbabilityResult>> {
+    return this.http.post<AnalysisRun<ProbabilityResult>>(
+      `/api/v1/datasets/${datasetId}/analyses/probability`,
+      payload,
+      { headers: this.developmentHeaders },
+    );
+  }
+
+  probabilityCatalog(): Observable<ProbabilityDistributionSpec[]> {
+    return this.http.get<ProbabilityDistributionSpec[]>('/api/v1/probability/distributions', {
+      headers: this.developmentHeaders,
+    });
+  }
+
+  list(
+    datasetId: number,
+    options: { analysisType?: string; limit?: number; beforeId?: number } = {},
+  ): Observable<AnalysisRunSummary[]> {
+    let params = new HttpParams();
+    if (options.analysisType) params = params.set('analysis_type', options.analysisType);
+    if (options.limit) params = params.set('limit', options.limit);
+    if (options.beforeId) params = params.set('before_id', options.beforeId);
     return this.http.get<AnalysisRunSummary[]>(`/api/v1/datasets/${datasetId}/analyses`, {
       headers: this.developmentHeaders,
+      params,
     });
   }
 

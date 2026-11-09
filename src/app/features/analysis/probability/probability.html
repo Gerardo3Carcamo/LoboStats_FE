@@ -1,0 +1,442 @@
+<section class="probability-heading" data-tour="probability-introduction">
+  <div>
+    <p class="section-label">Probabilidad</p>
+    <h2>Modela la incertidumbre</h2>
+    <p>Traduce una situación a una distribución, elige el cálculo y observa cómo se interpreta.</p>
+  </div>
+  <div class="heading-actions">
+    <button class="tour-button" type="button" (click)="startTour($event)">Ver recorrido</button>
+    <button class="heading-history" type="button" (click)="openHistoryDialog($event)">
+      Bitácora
+    </button>
+    <a routerLink="/descriptive">Volver a descriptiva</a>
+  </div>
+</section>
+
+<div class="probability-layout">
+  <aside class="calculator-panel" aria-labelledby="calculator-title">
+    <h3 id="calculator-title">Configurar modelo</h3>
+    <p class="workspace-reference">
+      <strong>{{ store.name() }}</strong>
+      <span>Los cálculos se guardan en este espacio.</span>
+    </p>
+
+    <fieldset class="distribution-picker" data-tour="probability-distribution">
+      <legend>Distribución</legend>
+      <select [value]="distribution()" (change)="updateDistribution($event)">
+        @for (category of categories(); track category) {
+          <optgroup [label]="category">
+            @for (item of catalog(); track item.key) {
+              @if (item.category === category) {
+                <option [value]="item.key">{{ item.label }}</option>
+              }
+            }
+          </optgroup>
+        }
+      </select>
+      <p class="distribution-description">{{ currentSpec()?.description }}</p>
+    </fieldset>
+
+    <fieldset class="mode-picker" data-tour="probability-mode">
+      <legend>Tipo de cálculo</legend>
+      @for (mode of calculationModes; track mode) {
+        <button
+          type="button"
+          [class.active]="calculationMode() === mode"
+          [attr.aria-pressed]="calculationMode() === mode"
+          (click)="selectMode(mode)"
+        >
+          {{ modeLabel(mode) }}
+        </button>
+      }
+      <p>{{ modeDescription() }}</p>
+    </fieldset>
+
+    <section class="parameter-section" data-tour="probability-parameters">
+      <div class="section-heading">
+        <h4>Parámetros</h4>
+        <p>{{ exampleText() }}</p>
+      </div>
+
+      <div class="parameter-grid">
+        @for (parameter of currentSpec()?.parameters ?? []; track parameter.key) {
+          <label>
+            <span>{{ parameter.label }}</span>
+            @if (parameter.kind === 'column') {
+              <select
+                [value]="parameterColumnKeys()[parameter.key]"
+                (change)="updateParameterColumn(parameter.key, $event)"
+              >
+                <option value="">Selecciona una columna</option>
+                @for (column of numericColumns(); track column.key) {
+                  <option [value]="column.key">{{ column.name }}</option>
+                }
+              </select>
+            } @else {
+              <input
+                type="number"
+                [attr.min]="parameter.minimum"
+                [attr.max]="parameter.maximum"
+                [attr.step]="parameter.step ?? 'any'"
+                [value]="parameterValues()[parameter.key]"
+                (input)="updateParameter(parameter.key, $event)"
+              />
+            }
+          </label>
+        }
+      </div>
+    </section>
+
+    @if (calculationMode() === 'event') {
+      <section class="event-section" data-tour="probability-event">
+        <h4>Evento</h4>
+        <label>
+          <span>Quiero calcular</span>
+          <select [value]="operation()" (change)="updateOperation($event)">
+            @if (isDiscrete()) {
+              <option value="exact">Exactamente</option>
+            }
+            <option value="at_most">Como máximo</option>
+            <option value="at_least">Como mínimo</option>
+            <option value="between">Entre dos valores</option>
+          </select>
+        </label>
+        <div class="event-bounds" [class.interval]="operation() === 'between'">
+          <label>
+            <span>{{ operation() === 'between' ? 'Desde' : 'Valor' }}</span>
+            <input
+              type="number"
+              [attr.step]="requiresIntegerInput() ? 1 : 'any'"
+              [attr.min]="requiresNonNegativeInput() ? 0 : null"
+              [value]="lower()"
+              (input)="updateLower($event)"
+            />
+          </label>
+          @if (operation() === 'between') {
+            <label>
+              <span>Hasta</span>
+              <input
+                type="number"
+                [attr.step]="requiresIntegerInput() ? 1 : 'any'"
+                [attr.min]="requiresNonNegativeInput() ? 0 : null"
+                [value]="upper()"
+                (input)="updateUpper($event)"
+              />
+            </label>
+          }
+        </div>
+      </section>
+    } @else {
+      <section class="input-section" data-tour="probability-event">
+        <h4>Entrada</h4>
+        <div class="source-picker" role="radiogroup" aria-label="Origen de los valores">
+          <label>
+            <input
+              type="radio"
+              name="probability-source"
+              value="constant"
+              [checked]="inputSource() === 'constant'"
+              (change)="updateInputSource($event)"
+            />
+            Un valor
+          </label>
+          <label>
+            <input
+              type="radio"
+              name="probability-source"
+              value="column"
+              [checked]="inputSource() === 'column'"
+              (change)="updateInputSource($event)"
+            />
+            Una columna
+          </label>
+        </div>
+
+        @if (inputSource() === 'constant') {
+          <label>
+            <span>{{
+              calculationMode() === 'inverse' ? 'Probabilidad acumulada' : 'Valor de X'
+            }}</span>
+            <input
+              type="number"
+              [attr.min]="
+                calculationMode() === 'inverse' ? 0 : requiresNonNegativeInput() ? 0 : null
+              "
+              [attr.max]="calculationMode() === 'inverse' ? 1 : null"
+              [attr.step]="
+                calculationMode() === 'inverse' ? 0.01 : requiresIntegerInput() ? 1 : 'any'
+              "
+              [value]="inputValue()"
+              (input)="updateInputValue($event)"
+            />
+          </label>
+        } @else {
+          <label>
+            <span>Columna numérica</span>
+            <select [value]="selectedColumnKey()" (change)="updateSelectedColumn($event)">
+              <option value="">Selecciona una variable</option>
+              @for (column of numericColumns(); track column.key) {
+                <option [value]="column.key">{{ column.name }}</option>
+              }
+            </select>
+          </label>
+          <label class="storage-check">
+            <input
+              type="checkbox"
+              [checked]="saveToWorksheet()"
+              (change)="updateSaveToWorksheet($event)"
+            />
+            Guardar resultados en la hoja
+          </label>
+          @if (saveToWorksheet()) {
+            <label>
+              <span>Nombre de la nueva columna</span>
+              <input
+                type="text"
+                maxlength="120"
+                [value]="outputColumnName()"
+                (input)="updateOutputColumnName($event)"
+              />
+            </label>
+          }
+        }
+      </section>
+    }
+
+    <button
+      class="calculate-button"
+      type="button"
+      data-tour="probability-run"
+      [disabled]="!canRun()"
+      [attr.aria-busy]="running()"
+      (click)="calculate()"
+    >
+      {{ running() ? 'Calculando…' : 'Ejecutar cálculo' }}
+    </button>
+    <p class="calculation-note">
+      El modelo usa los parámetros indicados; no estima valores a partir de la hoja.
+    </p>
+  </aside>
+
+  <section
+    class="probability-results"
+    data-tour="probability-results"
+    aria-label="Resultado del cálculo de probabilidad"
+  >
+    <div
+      class="calculation-status"
+      [attr.data-kind]="statusKind()"
+      [attr.role]="statusKind() === 'error' ? 'alert' : 'status'"
+    >
+      <span class="status-message">
+        <i aria-hidden="true"></i>
+        <span>{{ status() }}</span>
+      </span>
+      <button type="button" class="history-button" (click)="openHistoryDialog($event)">
+        Bitácora
+      </button>
+    </div>
+
+    @if (run(); as analysis) {
+      <header class="result-header">
+        <div>
+          <p>{{ analysis.result.distribution.label }} · cálculo #{{ analysis.id }}</p>
+          <h3 #resultHeading tabindex="-1">{{ analysis.result.calculation_formula }}</h3>
+          <span>{{ analysis.result.model_formula }}</span>
+        </div>
+        <button type="button" (click)="downloadResult()">Exportar resultado (.json)</button>
+      </header>
+
+      <section
+        class="probability-answer"
+        [attr.data-mode]="analysis.result.mode"
+        aria-labelledby="probability-answer-title"
+      >
+        @if (analysis.result.mode === 'inverse') {
+          <div class="inverse-input">
+            <p>Probabilidad de entrada</p>
+            <strong
+              >{{ formatNumber(primaryInput(analysis.result) * 100, 2) }}<span>%</span></strong
+            >
+          </div>
+          <div class="inverse-output">
+            <p id="probability-answer-title">Cuantil resultante</p>
+            <strong>{{ formatNumber(analysis.result.result_value, 6) }}</strong>
+          </div>
+          <p class="inverse-interpretation">{{ inverseInterpretation(analysis.result) }}</p>
+        } @else {
+          <div>
+            <p id="probability-answer-title">{{ analysis.result.calculation_label }}</p>
+            @if (resultIsPercentage(analysis.result)) {
+              <strong
+                >{{ formatNumber(analysis.result.result_value * 100, 2) }}<span>%</span></strong
+              >
+            } @else {
+              <strong>{{ formatNumber(analysis.result.result_value, 6) }}</strong>
+            }
+            @if (analysis.result.complement_probability !== undefined) {
+              <small>
+                Complemento:
+                {{ formatNumber(analysis.result.complement_probability * 100, 2) }} %
+              </small>
+            }
+          </div>
+          <p>{{ analysis.result.interpretation }}</p>
+        }
+      </section>
+
+      @if (analysis.warnings.length) {
+        <section class="warning-list" aria-labelledby="probability-warnings-title">
+          <h4 id="probability-warnings-title">Antes de interpretar</h4>
+          <ul>
+            @for (warning of analysis.warnings; track warning) {
+              <li>{{ warning }}</li>
+            }
+          </ul>
+        </section>
+      }
+
+      @if (analysis.result.calculations.length > 1) {
+        <section class="batch-results" aria-labelledby="batch-results-title">
+          <div class="chart-heading">
+            <h4 id="batch-results-title">Resultados por fila</h4>
+            <span>
+              {{ analysis.result.input?.column_key }} ·
+              {{ analysis.result.calculations.length }} valores
+            </span>
+          </div>
+          <div class="batch-scroll" tabindex="0" aria-label="Resultados del cálculo por columna">
+            <table>
+              <thead>
+                <tr>
+                  <th>Fila</th>
+                  <th>Entrada</th>
+                  <th>Resultado</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of analysis.result.calculations; track row.index) {
+                  <tr [class.invalid]="row.status === 'invalid'">
+                    <th scope="row">{{ row.index + 1 }}</th>
+                    <td>{{ row.input === null ? '—' : formatNumber(row.input, 6) }}</td>
+                    <td>{{ row.result === null ? '—' : formatNumber(row.result, 6) }}</td>
+                    <td>{{ row.error ?? 'Calculado' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+      }
+
+      <figure class="distribution-chart">
+        <div class="chart-heading">
+          <figcaption>Distribución y valor seleccionado</figcaption>
+          <div class="chart-legend" aria-hidden="true">
+            <span><i class="selected"></i>Selección</span>
+            <span><i></i>Distribución</span>
+          </div>
+        </div>
+        <svg
+          viewBox="0 0 720 290"
+          role="img"
+          aria-label="Gráfica de la distribución {{
+            analysis.result.distribution.label
+          }}. La marca resaltada corresponde al cálculo solicitado."
+        >
+          <line class="axis" x1="48" y1="248" x2="672" y2="248"></line>
+          @if (analysis.result.distribution.kind === 'discrete') {
+            @for (point of analysis.result.points; track point.x; let index = $index) {
+              <rect
+                [class.selected]="point.selected"
+                [attr.x]="
+                  chartX(index, analysis.result.points.length) -
+                  barWidth(analysis.result.points) / 2
+                "
+                [attr.y]="chartY(point.value, analysis.result.points)"
+                [attr.width]="barWidth(analysis.result.points)"
+                [attr.height]="248 - chartY(point.value, analysis.result.points)"
+                rx="1"
+              >
+                <title>
+                  X = {{ formatNumber(point.x) }}: {{ formatNumber(point.value * 100, 3) }} %
+                </title>
+              </rect>
+            }
+          } @else {
+            @if (analysis.result.mode !== 'pdf') {
+              <path
+                class="selected-area"
+                [attr.d]="selectedAreaPath(analysis.result.points)"
+              ></path>
+            }
+            <path class="density-line" [attr.d]="curvePath(analysis.result.points)"></path>
+            @for (point of analysis.result.points; track point.x; let index = $index) {
+              @if (point.selected) {
+                <circle
+                  class="selected-point"
+                  [attr.cx]="chartX(index, analysis.result.points.length)"
+                  [attr.cy]="chartY(point.value, analysis.result.points)"
+                  r="5"
+                ></circle>
+              }
+            }
+          }
+          <text x="48" y="272">{{ formatNumber(analysis.result.points[0].x, 2) }}</text>
+          <text x="672" y="272" text-anchor="end">
+            {{ formatNumber(analysis.result.points[analysis.result.points.length - 1].x, 2) }}
+          </text>
+        </svg>
+        <p class="chart-note">
+          La altura representa masa de probabilidad en modelos discretos y densidad en el modelo
+          normal. En CDF e inversa, el área acumulada queda resaltada.
+        </p>
+      </figure>
+
+      <dl class="distribution-summary">
+        <div>
+          <dt>Media teórica</dt>
+          <dd>{{ formatNumber(analysis.result.distribution.mean) }}</dd>
+        </div>
+        <div>
+          <dt>Varianza</dt>
+          <dd>{{ formatNumber(analysis.result.distribution.variance) }}</dd>
+        </div>
+        <div>
+          <dt>Desviación estándar</dt>
+          <dd>{{ formatNumber(analysis.result.distribution.std_dev) }}</dd>
+        </div>
+        <div>
+          <dt>Resultado principal</dt>
+          <dd>{{ formatNumber(analysis.result.result_value, 6) }}</dd>
+        </div>
+      </dl>
+
+      <section class="probability-guidance">
+        <h4>Comprueba los supuestos</h4>
+        <ul>
+          @for (item of analysis.result.guidance; track item) {
+            <li>{{ item }}</li>
+          }
+        </ul>
+        <p>Motor {{ analysis.engine_version }} · {{ formatDate(analysis.created_at) }}</p>
+      </section>
+    } @else {
+      <section class="empty-result">
+        <div class="probability-glyph" aria-hidden="true">P(A)</div>
+        <h3>Aún no hay un cálculo</h3>
+        <p>Elige una distribución, un tipo de cálculo y una entrada para obtener el resultado.</p>
+      </section>
+    }
+  </section>
+</div>
+
+<app-analysis-history-dialog
+  #historyDialog
+  [datasetId]="store.datasetId()"
+  analysisType="probability"
+  title="Bitácora de probabilidad"
+  [activeId]="run()?.id ?? null"
+  (selected)="openHistory($event)"
+/>

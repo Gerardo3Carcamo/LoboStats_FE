@@ -1,35 +1,89 @@
 <a class="skip-link" href="#main-content">Saltar al contenido</a>
 
-<div class="app-frame">
-  <aside class="sidebar">
-    <a class="brand" href="/" aria-label="LoboStats, inicio">
-      <span class="brand-mark" aria-hidden="true">LS</span>
-      <span>
-        <strong>LoboStats</strong>
-        <small>Laboratorio estadístico</small>
-      </span>
-    </a>
+<div class="app-frame" [attr.data-sidebar]="sidebarMode()">
+  @if (sidebarMode() === 'temporary') {
+    <button
+      class="sidebar-backdrop"
+      type="button"
+      aria-label="Cerrar menú de módulos"
+      (click)="closeTemporarySidebar()"
+    ></button>
+  }
+
+  <aside id="analysis-navigation" class="sidebar">
+    <div class="sidebar-head">
+      <a class="brand" href="/" aria-label="LoboStats, inicio">
+        <app-brand-mark />
+        <span class="sidebar-copy brand-copy">
+          <strong>LoboStats</strong>
+          <small>Laboratorio estadístico</small>
+        </span>
+      </a>
+
+      <div class="sidebar-actions">
+        @if (sidebarExpanded()) {
+          <button
+            class="pin-button"
+            type="button"
+            [class.active]="sidebarMode() === 'pinned'"
+            [attr.aria-pressed]="sidebarMode() === 'pinned'"
+            [attr.aria-label]="sidebarMode() === 'pinned' ? 'Desfijar menú' : 'Fijar menú abierto'"
+            [attr.title]="sidebarMode() === 'pinned' ? 'Desfijar menú' : 'Fijar menú abierto'"
+            (click)="togglePinnedSidebar()"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m8 4 8 0-1 6 3 3H6l3-3-1-6ZM12 13v7" />
+            </svg>
+          </button>
+        }
+        <button
+          class="sidebar-toggle"
+          type="button"
+          aria-controls="analysis-navigation"
+          [attr.aria-expanded]="sidebarExpanded()"
+          [attr.aria-label]="sidebarExpanded() ? 'Contraer menú' : 'Abrir menú de módulos'"
+          [attr.title]="sidebarExpanded() ? 'Contraer menú' : 'Abrir menú de módulos'"
+          (click)="toggleSidebar()"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            @if (sidebarExpanded()) {
+              <path d="m14.5 6-6 6 6 6" />
+            } @else {
+              <path d="M5 7h14M5 12h14M5 17h14" />
+            }
+          </svg>
+        </button>
+      </div>
+    </div>
 
     <nav aria-label="Módulos de análisis">
       @for (group of navigation; track group.label) {
         <section class="nav-group">
-          <p>{{ group.label }}</p>
-          @for (item of group.items; track item.badge) {
+          <p class="sidebar-copy nav-group-title">{{ group.label }}</p>
+          @for (item of group.items; track item.icon) {
             @if (item.available) {
               <a
                 class="nav-item"
                 [routerLink]="item.path"
                 routerLinkActive="active"
                 [routerLinkActiveOptions]="{ exact: true }"
+                [attr.title]="sidebarExpanded() ? null : item.label"
               >
-                <span>{{ item.badge }}</span>
-                {{ item.label }}
+                <app-navigation-icon class="nav-icon" [name]="item.icon" />
+                <span class="sidebar-copy nav-label">{{ item.label }}</span>
+                <span class="nav-tooltip" aria-hidden="true">{{ item.label }}</span>
               </a>
             } @else {
-              <span class="nav-item unavailable">
-                <span>{{ item.badge }}</span>
-                {{ item.label }}
-                <small>Próximamente</small>
+              <span
+                class="nav-item unavailable"
+                aria-disabled="true"
+                [attr.aria-label]="item.label + ', próximamente'"
+                [attr.title]="sidebarExpanded() ? null : item.label + ', próximamente'"
+              >
+                <app-navigation-icon class="nav-icon" [name]="item.icon" />
+                <span class="sidebar-copy nav-label">{{ item.label }}</span>
+                <small class="sidebar-copy nav-state">Próximamente</small>
+                <span class="nav-tooltip" aria-hidden="true">{{ item.label }} · Próximamente</span>
               </span>
             }
           }
@@ -39,28 +93,112 @@
 
     <div class="sidebar-foot">
       <span class="status-dot" aria-hidden="true"></span>
-      <span><strong>Fase 1</strong><small>Base del proyecto</small></span>
+      <span class="sidebar-copy sidebar-status"
+        ><strong>Laboratorio abierto</strong><small>Entorno académico UAdeC</small></span
+      >
     </div>
   </aside>
 
   <main id="main-content" tabindex="-1">
     <header class="topbar">
       <div>
-        <p class="eyebrow">Universidad Autónoma de Coahuila</p>
+        <p class="institution">Universidad Autónoma de Coahuila</p>
         <h1>Laboratorio de datos</h1>
       </div>
       <div class="topbar-actions">
         <button class="help-button" type="button" (click)="startTour($event)">
-          <span aria-hidden="true">?</span>
-          Ayuda
+          <span class="help-icon" aria-hidden="true">?</span>
+          <span class="help-label">Ayuda</span>
         </button>
         <div class="account">
           <span class="account-avatar" aria-hidden="true">A</span>
-          <span><strong>Alumno UAdeC</strong><small>Modo desarrollo</small></span>
+          <span><strong>Estudiante UAdeC</strong><small>Sesión de laboratorio</small></span>
         </div>
       </div>
     </header>
 
     <router-outlet />
   </main>
+
+  <nav class="mobile-nav" aria-label="Navegación principal">
+    @for (item of primaryMobileNavigation; track item.icon) {
+      <a
+        [routerLink]="item.path"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        <app-navigation-icon [name]="item.icon" />
+        <span>{{ item.shortLabel }}</span>
+      </a>
+    }
+    <button
+      type="button"
+      [class.active]="mobileMenuOpen()"
+      aria-haspopup="dialog"
+      [attr.aria-expanded]="mobileMenuOpen()"
+      (click)="openMobileMenu($event)"
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="5" cy="12" r="1.2" />
+        <circle cx="12" cy="12" r="1.2" />
+        <circle cx="19" cy="12" r="1.2" />
+      </svg>
+      <span>Más</span>
+    </button>
+  </nav>
+
+  @if (mobileMenuOpen()) {
+    <button
+      class="mobile-sheet-backdrop"
+      type="button"
+      aria-label="Cerrar menú de módulos"
+      (click)="closeMobileMenu()"
+    ></button>
+    <section
+      class="mobile-module-sheet"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="mobile-modules-title"
+      cdkTrapFocus
+      [cdkTrapFocusAutoCapture]="true"
+    >
+      <header>
+        <div>
+          <h2 id="mobile-modules-title">Módulos de LoboStats</h2>
+          <p>Prepara la hoja y elige cómo analizarla.</p>
+        </div>
+        <button #mobileMenuClose type="button" aria-label="Cerrar menú" (click)="closeMobileMenu()">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m6 6 12 12M18 6 6 18" />
+          </svg>
+        </button>
+      </header>
+
+      <nav aria-label="Todos los módulos">
+        @for (group of navigation; track group.label) {
+          <section>
+            <h3>{{ group.label }}</h3>
+            @for (item of group.items; track item.icon) {
+              @if (item.available) {
+                <a
+                  [routerLink]="item.path"
+                  routerLinkActive="active"
+                  [routerLinkActiveOptions]="{ exact: true }"
+                >
+                  <app-navigation-icon [name]="item.icon" />
+                  <span>{{ item.label }}</span>
+                </a>
+              } @else {
+                <span class="unavailable" aria-disabled="true">
+                  <app-navigation-icon [name]="item.icon" />
+                  <span>{{ item.label }}</span>
+                  <small>Próximamente</small>
+                </span>
+              }
+            }
+          </section>
+        }
+      </nav>
+    </section>
+  }
 </div>
