@@ -77,7 +77,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
-          fetch-depth: 1
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Verify Raspberry Pi deployment prerequisites
@@ -101,7 +101,7 @@ jobs:
         shell: bash
         run: |
           set -Eeuo pipefail
-          git init --bare "$SOURCE_REPO"
+          git init --bare --initial-branch="$DEPLOY_BRANCH" "$SOURCE_REPO"
           git -C "$GITHUB_WORKSPACE" push \
             "$SOURCE_REPO" \
             "$GITHUB_SHA:refs/heads/$DEPLOY_BRANCH"
