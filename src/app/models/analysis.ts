@@ -7,6 +7,94 @@ export interface DescriptiveAnalysisRequest {
   frequency_limit: number;
 }
 
+export type HypothesisTestKey =
+  | 'one_sample_z'
+  | 'one_sample_t'
+  | 'two_sample_t'
+  | 'paired_t'
+  | 'one_proportion'
+  | 'two_proportions'
+  | 'one_sample_poisson_rate'
+  | 'two_sample_poisson_rate'
+  | 'one_variance'
+  | 'two_variances'
+  | 'correlation'
+  | 'normality'
+  | 'chi_square_independence'
+  | 'poisson_goodness_of_fit'
+  | 'one_sample_sign'
+  | 'one_sample_wilcoxon'
+  | 'mann_whitney'
+  | 'kruskal_wallis'
+  | 'mood_median'
+  | 'friedman'
+  | 'runs';
+
+export type HypothesisAlternative = 'two_sided' | 'less' | 'greater';
+export type HypothesisDesign =
+  | 'one_numeric'
+  | 'one_categorical'
+  | 'paired_numeric'
+  | 'paired_categorical'
+  | 'grouped_numeric'
+  | 'grouped_categorical'
+  | 'blocked_numeric';
+
+export interface HypothesisTestSpec {
+  key: HypothesisTestKey;
+  label: string;
+  category: string;
+  design: HypothesisDesign;
+  description: string;
+}
+
+export interface HypothesisAnalysisRequest {
+  test: HypothesisTestKey;
+  column: string;
+  second_column?: string;
+  group_by?: string;
+  block_by?: string;
+  groups?: unknown[];
+  hypothesized_value?: number;
+  known_std_dev?: number;
+  alternative?: HypothesisAlternative;
+  confidence_level?: number;
+  equal_variances?: boolean;
+  method?: string;
+  success_value?: unknown;
+  observation_length?: number;
+  second_observation_length?: number;
+  sequence_cutoff?: number;
+}
+
+export interface HypothesisResult {
+  dataset: {
+    id: number;
+    name: string;
+    revision: number;
+    content_sha256: string;
+    row_count: number;
+  };
+  test: { key: HypothesisTestKey; label: string; category: string };
+  hypotheses: { null: string; alternative: string };
+  alpha: number;
+  confidence_level: number;
+  alternative: HypothesisAlternative;
+  method: string;
+  result: {
+    statistic: number | null;
+    p_value: number | null;
+    degrees_of_freedom: number | number[] | null;
+    estimate: number | null;
+    null_value: number | null;
+    confidence_interval: { level: number; lower: number | null; upper: number | null } | null;
+    details: Record<string, unknown>;
+  };
+  decision: 'reject' | 'fail_to_reject' | null;
+  interpretation: string;
+  guidance: string[];
+}
+
 export type ProbabilityDistribution =
   | 'binomial'
   | 'poisson'

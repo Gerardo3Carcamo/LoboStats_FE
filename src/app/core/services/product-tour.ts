@@ -11,6 +11,10 @@ import {
   PROBABILITY_TOUR_REVISION,
   PROBABILITY_TOUR_STEPS,
 } from '../../features/analysis/probability/probability-tour';
+import {
+  HYPOTHESIS_TOUR_REVISION,
+  HYPOTHESIS_TOUR_STEPS,
+} from '../../features/analysis/hypothesis/hypothesis-tour';
 
 import {
   WORKSHEET_TOUR_REVISION,
@@ -32,6 +36,10 @@ export class ProductTourService {
 
   startProbabilityTour(trigger: HTMLElement): void {
     this.startTour(trigger, PROBABILITY_TOUR_STEPS, PROBABILITY_TOUR_REVISION);
+  }
+
+  startHypothesisTour(trigger: HTMLElement): void {
+    this.startTour(trigger, HYPOTHESIS_TOUR_STEPS, HYPOTHESIS_TOUR_REVISION);
   }
 
   private startTour(trigger: HTMLElement, steps: DriveStep[], revision: string): void {

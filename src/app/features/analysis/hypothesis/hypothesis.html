@@ -1,0 +1,426 @@
+<section class="hypothesis-heading" data-tour="hypothesis-introduction">
+  <div>
+    <p class="section-label">Pruebas de hipótesis · referencia Minitab 15</p>
+    <h2>Contrasta la evidencia</h2>
+    <p>
+      Formula H₀ y H₁, conserva el diseño del estudio y evalúa significancia, magnitud e
+      incertidumbre en un mismo resultado.
+    </p>
+  </div>
+  <div class="heading-actions">
+    <button class="tour-button" type="button" (click)="startTour($event)">Ver recorrido</button>
+    <button class="heading-history" type="button" (click)="openHistoryDialog($event)">
+      Bitácora
+    </button>
+    <a routerLink="/probability">Volver a probabilidad</a>
+  </div>
+</section>
+
+<div class="hypothesis-layout">
+  <aside class="hypothesis-controls" aria-labelledby="hypothesis-controls-title">
+    <h3 id="hypothesis-controls-title">Configurar contraste</h3>
+    <p class="workspace-reference">
+      <strong>{{ store.name() }}</strong>
+      <span>El análisis quedará ligado a esta revisión de la hoja.</span>
+    </p>
+
+    <fieldset class="test-picker" data-tour="hypothesis-test">
+      <legend>Prueba</legend>
+      <select [value]="selectedTest()" (change)="selectTest($event)">
+        @for (category of categories(); track category) {
+          <optgroup [label]="category">
+            @for (item of catalog(); track item.key) {
+              @if (item.category === category) {
+                <option [value]="item.key">{{ item.label }}</option>
+              }
+            }
+          </optgroup>
+        }
+      </select>
+      <p>{{ currentSpec().description }}</p>
+    </fieldset>
+
+    <section class="data-section" data-tour="hypothesis-data">
+      <h4>Datos</h4>
+      <label>
+        <span>{{ needsSecondColumn() ? 'Primera variable' : 'Variable de respuesta' }}</span>
+        <select [value]="column()" (change)="updateColumn($event)">
+          <option value="">Selecciona una columna</option>
+          @for (item of responseColumns(); track item.key) {
+            <option [value]="item.key">{{ item.name }}</option>
+          }
+        </select>
+      </label>
+
+      @if (needsSecondColumn()) {
+        <label>
+          <span>Segunda variable</span>
+          <select [value]="secondColumn()" (change)="updateSecondColumn($event)">
+            <option value="">Selecciona una columna</option>
+            @for (item of responseColumns(); track item.key) {
+              <option [value]="item.key">{{ item.name }}</option>
+            }
+          </select>
+        </label>
+      }
+
+      @if (needsGroup()) {
+        <label>
+          <span>Variable de grupo o tratamiento</span>
+          <select [value]="groupBy()" (change)="updateGroupBy($event)">
+            <option value="">Selecciona una columna</option>
+            @for (item of allColumns(); track item.key) {
+              @if (item.key !== column()) {
+                <option [value]="item.key">{{ item.name }}</option>
+              }
+            }
+          </select>
+        </label>
+        @if (groupValues().length) {
+          <p class="detected-values">
+            Niveles detectados: {{ groupValues().slice(0, 6).join(', ') }}
+            @if (groupValues().length > 6) {
+              <span>y {{ groupValues().length - 6 }} más</span>
+            }
+          </p>
+        }
+        @if (needsTwoGroups() && groupValues().length >= 2) {
+          <div class="group-pair">
+            <label>
+              <span>Primer grupo</span>
+              <select [value]="selectedFirstGroup()" (change)="updateFirstGroup($event)">
+                @for (value of groupValues(); track value) {
+                  <option [value]="value">{{ value }}</option>
+                }
+              </select>
+            </label>
+            <label>
+              <span>Segundo grupo</span>
+              <select [value]="selectedSecondGroup()" (change)="updateSecondGroup($event)">
+                @for (value of groupValues(); track value) {
+                  <option [value]="value">{{ value }}</option>
+                }
+              </select>
+            </label>
+          </div>
+        }
+      }
+
+      @if (needsBlock()) {
+        <label>
+          <span>Variable de bloque</span>
+          <select [value]="blockBy()" (change)="updateBlockBy($event)">
+            <option value="">Selecciona una columna</option>
+            @for (item of allColumns(); track item.key) {
+              @if (item.key !== column() && item.key !== groupBy()) {
+                <option [value]="item.key">{{ item.name }}</option>
+              }
+            }
+          </select>
+        </label>
+      }
+
+      @if (needsSuccessValue()) {
+        <label>
+          <span>Evento de interés</span>
+          <select [value]="successValue()" (change)="updateSuccessValue($event)">
+            <option value="">Selecciona el evento</option>
+            @for (value of eventValues(); track value) {
+              <option [value]="value">{{ value }}</option>
+            }
+          </select>
+        </label>
+      }
+    </section>
+
+    <section class="options-section" data-tour="hypothesis-options">
+      <h4>Hipótesis y método</h4>
+      @if (needsNullValue()) {
+        <label>
+          <span>Valor hipotético</span>
+          <input
+            type="number"
+            step="any"
+            [value]="hypothesizedValue()"
+            (input)="updateHypothesizedValue($event)"
+          />
+        </label>
+      }
+
+      @if (selectedTest() === 'one_sample_z') {
+        <label>
+          <span>Desviación estándar poblacional (σ)</span>
+          <input
+            type="number"
+            min="0.000001"
+            step="any"
+            [value]="knownStdDev()"
+            (input)="updateKnownStdDev($event)"
+          />
+        </label>
+      }
+
+      @if (selectedTest() === 'runs') {
+        <label>
+          <span>Punto de corte (vacío = mediana)</span>
+          <input
+            type="number"
+            step="any"
+            [value]="sequenceCutoff() ?? ''"
+            (input)="updateSequenceCutoff($event)"
+          />
+        </label>
+      }
+
+      <label>
+        <span>Hipótesis alternativa</span>
+        <select [value]="alternative()" (change)="updateAlternative($event)">
+          <option value="two_sided">Diferente (≠)</option>
+          <option value="less">Menor (&lt;)</option>
+          <option value="greater">Mayor (&gt;)</option>
+        </select>
+      </label>
+
+      <label>
+        <span>Nivel de confianza (%)</span>
+        <input
+          type="number"
+          min="50.1"
+          max="99.9"
+          step="0.1"
+          [value]="confidencePercent()"
+          (input)="updateConfidence($event)"
+        />
+      </label>
+
+      <label>
+        <span>Método</span>
+        <select [value]="method()" (change)="updateMethod($event)">
+          @for (option of methodOptions(); track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </label>
+
+      @if (selectedTest() === 'two_sample_t') {
+        <label class="check-option">
+          <input
+            type="checkbox"
+            [checked]="equalVariances()"
+            (change)="updateEqualVariances($event)"
+          />
+          Suponer varianzas iguales
+        </label>
+      }
+
+      @if (selectedTest().includes('poisson_rate')) {
+        <div class="length-grid">
+          <label>
+            <span>Longitud de observación 1</span>
+            <input
+              type="number"
+              min="0.000001"
+              step="any"
+              [value]="observationLength()"
+              (input)="updateObservationLength($event)"
+            />
+          </label>
+          @if (selectedTest() === 'two_sample_poisson_rate') {
+            <label>
+              <span>Longitud de observación 2</span>
+              <input
+                type="number"
+                min="0.000001"
+                step="any"
+                [value]="secondObservationLength()"
+                (input)="updateSecondObservationLength($event)"
+              />
+            </label>
+          }
+        </div>
+      }
+    </section>
+
+    <button
+      class="run-button"
+      type="button"
+      data-tour="hypothesis-run"
+      [disabled]="!canRun()"
+      [attr.aria-busy]="running()"
+      (click)="analyze()"
+    >
+      {{ running() ? 'Ejecutando…' : 'Ejecutar prueba' }}
+    </button>
+    <p class="run-note">Los valores faltantes se excluyen y quedan documentados como advertencias.</p>
+  </aside>
+
+  <section
+    class="hypothesis-results"
+    data-tour="hypothesis-results"
+    aria-label="Resultado de la prueba de hipótesis"
+  >
+    <div
+      class="analysis-status"
+      [attr.data-kind]="statusKind()"
+      [attr.role]="statusKind() === 'error' ? 'alert' : 'status'"
+    >
+      <span><i aria-hidden="true"></i>{{ status() }}</span>
+      <button type="button" (click)="openHistoryDialog($event)">Bitácora</button>
+    </div>
+
+    @if (run(); as analysis) {
+      <header class="result-header">
+        <div>
+          <p>{{ analysis.result.test.category }} · análisis #{{ analysis.id }}</p>
+          <h3 #resultHeading tabindex="-1">{{ analysis.result.test.label }}</h3>
+          <span>{{ analysis.result.method }}</span>
+        </div>
+        <button type="button" (click)="downloadResult()">Exportar resultado (.json)</button>
+      </header>
+
+      <section
+        class="decision-panel"
+        [attr.data-decision]="analysis.result.decision"
+        aria-labelledby="hypothesis-decision-title"
+      >
+        <div class="decision-mark" aria-hidden="true">
+          {{ analysis.result.decision === 'reject' ? 'H₀ ×' : 'H₀' }}
+        </div>
+        <div>
+          <p id="hypothesis-decision-title">
+            {{ analysis.result.decision === 'reject' ? 'Se rechaza H₀' : 'No se rechaza H₀' }}
+          </p>
+          <strong>p = {{ formatNumber(analysis.result.result.p_value, 6) }}</strong>
+          <span>α = {{ formatNumber(analysis.result.alpha, 4) }}</span>
+        </div>
+        <p>{{ analysis.result.interpretation }}</p>
+      </section>
+
+      <section class="hypotheses-card" aria-labelledby="formal-hypotheses-title">
+        <h4 id="formal-hypotheses-title">Hipótesis formuladas</h4>
+        <div><span>Nula</span><strong>{{ analysis.result.hypotheses.null }}</strong></div>
+        <div><span>Alternativa</span><strong>{{ analysis.result.hypotheses.alternative }}</strong></div>
+      </section>
+
+      <dl class="result-metrics">
+        <div>
+          <dt>Estimación</dt>
+          <dd>{{ formatNumber(analysis.result.result.estimate) }}</dd>
+        </div>
+        <div>
+          <dt>Estadístico</dt>
+          <dd>{{ formatNumber(analysis.result.result.statistic) }}</dd>
+        </div>
+        <div>
+          <dt>Grados de libertad</dt>
+          <dd>{{ formatDegrees(analysis.result.result.degrees_of_freedom) }}</dd>
+        </div>
+        <div>
+          <dt>Valor de referencia</dt>
+          <dd>{{ formatNumber(analysis.result.result.null_value) }}</dd>
+        </div>
+      </dl>
+
+      @if (analysis.result.result.confidence_interval; as interval) {
+        <section class="interval-card" aria-labelledby="confidence-interval-title">
+          <div>
+            <h4 id="confidence-interval-title">
+              Intervalo de confianza {{ formatNumber(interval.level * 100, 2) }} %
+            </h4>
+            <p>La amplitud expresa la incertidumbre de la estimación.</p>
+          </div>
+          <strong>
+            {{ interval.lower === null ? '−∞' : formatNumber(interval.lower) }}
+            <span>—</span>
+            {{ interval.upper === null ? '+∞' : formatNumber(interval.upper) }}
+          </strong>
+        </section>
+      }
+
+      @if (groups().length) {
+        <section class="group-summary" aria-labelledby="group-summary-title">
+          <h4 id="group-summary-title">Resumen por grupo</h4>
+          <div class="table-scroll" tabindex="0">
+            <table>
+              <thead><tr><th>Grupo</th><th>N</th><th>Media</th><th>Mediana</th><th>Desv. estándar</th><th>Proporción / tasa</th></tr></thead>
+              <tbody>
+                @for (group of groups(); track group['name']) {
+                  <tr>
+                    <th scope="row">{{ group['name'] }}</th>
+                    <td>{{ group['n'] ?? '—' }}</td>
+                    <td>{{ formatNumber(group['mean']) }}</td>
+                    <td>{{ formatNumber(group['median']) }}</td>
+                    <td>{{ formatNumber(group['std_dev']) }}</td>
+                    <td>{{ formatNumber(group['proportion'] ?? group['rate']) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+      }
+
+      @if (tableRows().length) {
+        <section class="contingency-summary" aria-labelledby="contingency-title">
+          <h4 id="contingency-title">Observado y esperado</h4>
+          <div class="table-scroll" tabindex="0">
+            <table>
+              <thead>
+                <tr><th>Categoría</th><th>Observado</th><th>Esperado</th></tr>
+              </thead>
+              <tbody>
+                @for (row of tableRows(); track row.label) {
+                  <tr>
+                    <th scope="row">{{ row.label }}</th>
+                    <td>{{ row.observed.join(' · ') }}</td>
+                    <td>
+                      @for (value of row.expected; track $index) {
+                        {{ formatNumber(value, 3) }}{{ $last ? '' : ' · ' }}
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+      }
+
+      @if (analysis.warnings.length) {
+        <section class="warning-list" aria-labelledby="hypothesis-warnings-title">
+          <h4 id="hypothesis-warnings-title">Advertencias del análisis</h4>
+          <ul>
+            @for (warning of analysis.warnings; track warning) {
+              <li>{{ warning }}</li>
+            }
+          </ul>
+        </section>
+      }
+
+      <section class="guidance-panel">
+        <h4>Antes de concluir</h4>
+        <ul>
+          @for (item of analysis.result.guidance; track item) {
+            <li>{{ item }}</li>
+          }
+        </ul>
+        <p>Motor {{ analysis.engine_version }} · revisión {{ analysis.dataset_revision }}</p>
+      </section>
+    } @else {
+      <section class="empty-result">
+        <div class="hypothesis-glyph" aria-hidden="true">H₀</div>
+        <h3>Aún no hay evidencia calculada</h3>
+        <p>Elige una prueba, asigna las variables y define la hipótesis antes de ejecutar.</p>
+      </section>
+    }
+  </section>
+</div>
+
+<app-analysis-history-dialog
+  #historyDialog
+  [datasetId]="store.datasetId()"
+  analysisType="hypothesis"
+  title="Bitácora de pruebas de hipótesis"
+  [activeId]="run()?.id ?? null"
+  (selected)="openHistory($event)"
+/>

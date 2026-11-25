@@ -18,5 +18,10 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/analysis/probability/probability').then((module) => module.Probability),
   },
+  {
+    path: 'hypothesis',
+    loadComponent: () =>
+      import('./features/analysis/hypothesis/hypothesis').then((module) => module.Hypothesis),
+  },
   { path: '**', redirectTo: '' },
 ];

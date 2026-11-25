@@ -7,6 +7,9 @@ import {
   AnalysisRunSummary,
   DescriptiveAnalysisRequest,
   DescriptiveResult,
+  HypothesisAnalysisRequest,
+  HypothesisResult,
+  HypothesisTestSpec,
   ProbabilityAnalysisRequest,
   ProbabilityDistributionSpec,
   ProbabilityResult,
@@ -26,6 +29,23 @@ export class AnalysisApi {
   ): Observable<AnalysisRun<DescriptiveResult>> {
     return this.http.post<AnalysisRun<DescriptiveResult>>(
       `/api/v1/datasets/${datasetId}/analyses/descriptive`,
+      payload,
+      { headers: this.developmentHeaders },
+    );
+  }
+
+  hypothesisCatalog(): Observable<HypothesisTestSpec[]> {
+    return this.http.get<HypothesisTestSpec[]>('/api/v1/hypothesis/tests', {
+      headers: this.developmentHeaders,
+    });
+  }
+
+  hypothesis(
+    datasetId: number,
+    payload: HypothesisAnalysisRequest,
+  ): Observable<AnalysisRun<HypothesisResult>> {
+    return this.http.post<AnalysisRun<HypothesisResult>>(
+      `/api/v1/datasets/${datasetId}/analyses/hypothesis`,
       payload,
       { headers: this.developmentHeaders },
     );

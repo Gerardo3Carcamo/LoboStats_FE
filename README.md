@@ -26,6 +26,10 @@ La aplicacion queda disponible en `http://localhost:4200`. El proxy de desarroll
 - Agrupación de resultados, intervalos de confianza, histogramas, cajas y gráficas Q-Q.
 - Resultados persistidos y exportables como JSON reproducible.
 - Historial de análisis con aviso cuando el dataset tiene una revisión posterior.
+- Pruebas de hipótesis para medias, proporciones, tasas, varianzas, asociación,
+  normalidad, ajuste, aleatoriedad y métodos no paramétricos de Minitab 15.
+- Formulación visible de H₀ y H₁, intervalos de confianza, advertencias y
+  resultados exportables y reproducibles.
 - Layout adaptable a escritorio, tableta y movil.
 - Recorrido guiado de la hoja de trabajo, disponible desde el boton Ayuda.
 

@@ -83,7 +83,8 @@ export class App {
           label: 'Hipótesis',
           shortLabel: 'Hipótesis',
           icon: 'hypothesis',
-          available: false,
+          available: true,
+          path: '/hypothesis',
         },
         {
           label: 'Regresión',
@@ -184,6 +185,10 @@ export class App {
     }
     if (this.router.url.startsWith('/probability')) {
       this.productTour.startProbabilityTour(trigger);
+      return;
+    }
+    if (this.router.url.startsWith('/hypothesis')) {
+      this.productTour.startHypothesisTour(trigger);
       return;
     }
     if (this.router.url === '/') {
