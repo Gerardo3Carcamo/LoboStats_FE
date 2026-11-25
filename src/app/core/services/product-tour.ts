@@ -19,6 +19,10 @@ import {
   REGRESSION_TOUR_REVISION,
   REGRESSION_TOUR_STEPS,
 } from '../../features/analysis/regression/regression-tour';
+import {
+  MANUFACTURING_TOUR_REVISION,
+  MANUFACTURING_TOUR_STEPS,
+} from '../../features/business/manufacturing/manufacturing-tour';
 
 import {
   WORKSHEET_TOUR_REVISION,
@@ -48,6 +52,10 @@ export class ProductTourService {
 
   startRegressionTour(trigger: HTMLElement): void {
     this.startTour(trigger, REGRESSION_TOUR_STEPS, REGRESSION_TOUR_REVISION);
+  }
+
+  startManufacturingTour(trigger: HTMLElement): void {
+    this.startTour(trigger, MANUFACTURING_TOUR_STEPS, MANUFACTURING_TOUR_REVISION);
   }
 
   private startTour(trigger: HTMLElement, steps: DriveStep[], revision: string): void {

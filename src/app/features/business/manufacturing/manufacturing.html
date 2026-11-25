@@ -1,0 +1,413 @@
+<section class="manufacturing-heading" data-tour="manufacturing-introduction">
+  <div>
+    <p class="section-label">Analítica empresarial · planta manufacturera</p>
+    <h2>Haz visible dónde pierde tiempo la planta</h2>
+    <p>
+      Reconcilia ciclos, paros y calidad para comparar turnos y priorizar la pérdida que más
+      limita la producción.
+    </p>
+  </div>
+  <div class="heading-actions">
+    <button class="tour-button" type="button" (click)="startTour($event)">Ver recorrido</button>
+    <button class="heading-history" type="button" (click)="openHistoryDialog($event)">
+      Bitácora
+    </button>
+    <a routerLink="/">Volver a la hoja</a>
+  </div>
+</section>
+
+<section class="loss-equation" data-tour="manufacturing-ledger" aria-label="Contabilidad de pérdidas">
+  @for (item of timeLedger(); track item.kind; let first = $first; let last = $last) {
+    @if (!first && !last) {
+      <span class="operator" aria-hidden="true">−</span>
+    }
+    @if (last) {
+      <span class="operator equals" aria-hidden="true">=</span>
+    }
+    <div [attr.data-kind]="item.kind">
+      <span>{{ item.label }}</span>
+      <strong>{{ item.value === null ? 'por calcular' : formatNumber(item.value, 1) + ' min' }}</strong>
+    </div>
+  }
+</section>
+
+<div class="manufacturing-layout">
+  <aside class="plant-mapper" aria-labelledby="plant-mapper-title">
+    <h3 id="plant-mapper-title">Preparar datos de planta</h3>
+    <p class="workspace-reference">
+      <strong>{{ store.name() }}</strong>
+      <span>{{ store.filledRows().length }} registros disponibles.</span>
+    </p>
+
+    <fieldset class="source-picker" data-tour="manufacturing-source">
+      <legend>Formato de origen</legend>
+      <select [value]="mode()" (change)="updateMode($event)">
+        <option value="summary">Resumen por turno</option>
+        <option value="event_log">Bitácora de eventos</option>
+        <option value="cycle_log">Registro de ciclos</option>
+      </select>
+      <p>{{ modeDescription() }}</p>
+    </fieldset>
+
+    <section class="mapping-section" data-tour="manufacturing-mapping">
+      <h4>Asignar columnas</h4>
+
+      @if (mode() === 'summary') {
+        <label>
+          <span>Tiempo programado *</span>
+          <select [value]="mapping().planned_time ?? ''" (change)="updateMapping('planned_time', $event)">
+            <option value="">Selecciona una columna</option>
+            @for (column of columns(); track column.key) {
+              <option [value]="column.key" [selected]="column.key === mapping().planned_time">{{ column.name }}</option>
+            }
+          </select>
+        </label>
+        <label>
+          <span>Tiempo operativo</span>
+          <select [value]="mapping().operating_time ?? ''" (change)="updateMapping('operating_time', $event)">
+            <option value="">Derivar de los paros</option>
+            @for (column of columns(); track column.key) {
+              <option [value]="column.key" [selected]="column.key === mapping().operating_time">{{ column.name }}</option>
+            }
+          </select>
+        </label>
+        <div class="field-pair">
+          <label>
+            <span>Paro planeado</span>
+            <select [value]="mapping().planned_downtime ?? ''" (change)="updateMapping('planned_downtime', $event)">
+              <option value="">Sin columna</option>
+              @for (column of columns(); track column.key) {
+                <option [value]="column.key" [selected]="column.key === mapping().planned_downtime">{{ column.name }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            <span>Paro no planeado</span>
+            <select [value]="mapping().unplanned_downtime ?? ''" (change)="updateMapping('unplanned_downtime', $event)">
+              <option value="">Sin columna</option>
+              @for (column of columns(); track column.key) {
+                <option [value]="column.key" [selected]="column.key === mapping().unplanned_downtime">{{ column.name }}</option>
+              }
+            </select>
+          </label>
+        </div>
+      }
+
+      @if (mode() === 'event_log') {
+        <label>
+          <span>Estado del evento *</span>
+          <select [value]="mapping().event_state ?? ''" (change)="updateMapping('event_state', $event)">
+            <option value="">Selecciona una columna</option>
+            @for (column of columns(); track column.key) {
+              <option [value]="column.key" [selected]="column.key === mapping().event_state">{{ column.name }}</option>
+            }
+          </select>
+        </label>
+        <label>
+          <span>Duración</span>
+          <select [value]="mapping().duration ?? ''" (change)="updateMapping('duration', $event)">
+            <option value="">Calcular con inicio y fin</option>
+            @for (column of columns(); track column.key) {
+              <option [value]="column.key" [selected]="column.key === mapping().duration">{{ column.name }}</option>
+            }
+          </select>
+        </label>
+        @if (!mapping().duration) {
+          <div class="field-pair">
+            <label>
+              <span>Inicio *</span>
+              <select [value]="mapping().period_start ?? ''" (change)="updateMapping('period_start', $event)">
+                <option value="">Selecciona</option>
+                @for (column of columns(); track column.key) {
+                  <option [value]="column.key" [selected]="column.key === mapping().period_start">{{ column.name }}</option>
+                }
+              </select>
+            </label>
+            <label>
+              <span>Fin *</span>
+              <select [value]="mapping().period_end ?? ''" (change)="updateMapping('period_end', $event)">
+                <option value="">Selecciona</option>
+                @for (column of columns(); track column.key) {
+                  <option [value]="column.key" [selected]="column.key === mapping().period_end">{{ column.name }}</option>
+                }
+              </select>
+            </label>
+          </div>
+        }
+        <label>
+          <span>Causa del paro</span>
+          <select [value]="mapping().reason ?? ''" (change)="updateMapping('reason', $event)">
+            <option value="">Sin columna</option>
+            @for (column of columns(); track column.key) {
+              <option [value]="column.key" [selected]="column.key === mapping().reason">{{ column.name }}</option>
+            }
+          </select>
+        </label>
+        <details class="value-groups">
+          <summary>Clasificar estados</summary>
+          <label><span>Operando</span><input type="text" [value]="runningValues()" (input)="updateText(runningValues, $event)" /></label>
+          <label><span>Paro planeado</span><input type="text" [value]="plannedStopValues()" (input)="updateText(plannedStopValues, $event)" /></label>
+          <label><span>Paro no planeado</span><input type="text" [value]="unplannedStopValues()" (input)="updateText(unplannedStopValues, $event)" /></label>
+        </details>
+      }
+
+      @if (mode() === 'cycle_log') {
+        <label>
+          <span>Tiempo de ciclo *</span>
+          <select [value]="mapping().cycle_time ?? ''" (change)="updateMapping('cycle_time', $event)">
+            <option value="">Selecciona una columna</option>
+            @for (column of columns(); track column.key) {
+              <option [value]="column.key" [selected]="column.key === mapping().cycle_time">{{ column.name }}</option>
+            }
+          </select>
+        </label>
+        <label>
+          <span>Resultado de calidad</span>
+          <select [value]="mapping().quality_result ?? ''" (change)="updateMapping('quality_result', $event)">
+            <option value="">Sin columna</option>
+            @for (column of columns(); track column.key) {
+              <option [value]="column.key" [selected]="column.key === mapping().quality_result">{{ column.name }}</option>
+            }
+          </select>
+        </label>
+        <label>
+          <span>Valores considerados buenos</span>
+          <input type="text" [value]="goodValues()" (input)="updateText(goodValues, $event)" />
+        </label>
+      }
+
+      <details class="optional-mapping">
+        <summary>Conteos, medición y alcance</summary>
+        <div class="mapping-grid">
+          @for (
+            field of [
+              ['total_count', 'Unidades totales'],
+              ['good_count', 'Unidades buenas'],
+              ['first_pass_good_count', 'Buenas a primera pasada'],
+              ['scrap_count', 'Scrap'],
+              ['rework_count', 'Retrabajo'],
+              ['defect_count', 'Defectos'],
+              ['ideal_cycle_time', 'Ciclo ideal'],
+              ['standard_cycle_time', 'Ciclo estándar'],
+              ['demand', 'Demanda'],
+              ['measurement', 'Medición de calidad'],
+              ['subgroup', 'Subgrupo'],
+              ['line', 'Línea'],
+              ['machine', 'Máquina'],
+              ['shift', 'Turno'],
+              ['product', 'Producto']
+            ];
+            track field[0]
+          ) {
+            <label>
+              <span>{{ field[1] }}</span>
+              <select [value]="$any(mapping())[field[0]] ?? ''" (change)="updateMapping($any(field[0]), $event)">
+                <option value="">Sin columna</option>
+                @for (column of columns(); track column.key) {
+                  <option [value]="column.key" [selected]="column.key === $any(mapping())[field[0]]">{{ column.name }}</option>
+                }
+              </select>
+            </label>
+          }
+        </div>
+      </details>
+    </section>
+
+    <section class="target-section" data-tour="manufacturing-targets">
+      <h4>Unidades y objetivos</h4>
+      <div class="field-pair">
+        <label>
+          <span>Unidad de tiempos</span>
+          <select [value]="timeUnit()" (change)="updateTimeUnit($event)">
+            <option value="seconds">Segundos</option>
+            <option value="minutes">Minutos</option>
+            <option value="hours">Horas</option>
+          </select>
+        </label>
+        <label>
+          <span>Unidad de ciclos</span>
+          <select [value]="cycleTimeUnit()" (change)="updateCycleTimeUnit($event)">
+            <option value="seconds">Segundos</option>
+            <option value="minutes">Minutos</option>
+            <option value="hours">Horas</option>
+          </select>
+        </label>
+      </div>
+      <div class="target-grid">
+        <label><span>Ciclo ideal</span><input type="number" step="any" [value]="idealCycle() ?? ''" (input)="updateNumber(idealCycle, $event)" /></label>
+        <label><span>Ciclo estándar</span><input type="number" step="any" [value]="standardCycle() ?? ''" (input)="updateNumber(standardCycle, $event)" /></label>
+        <label><span>Demanda</span><input type="number" step="any" [value]="demand() ?? ''" (input)="updateNumber(demand, $event)" /></label>
+        <label><span>Oportunidades / unidad</span><input type="number" step="any" [value]="opportunities() ?? ''" (input)="updateNumber(opportunities, $event)" /></label>
+        <label><span>LSL</span><input type="number" step="any" [value]="lsl() ?? ''" (input)="updateNumber(lsl, $event)" /></label>
+        <label><span>Objetivo</span><input type="number" step="any" [value]="target() ?? ''" (input)="updateNumber(target, $event)" /></label>
+        <label><span>USL</span><input type="number" step="any" [value]="usl() ?? ''" (input)="updateNumber(usl, $event)" /></label>
+      </div>
+    </section>
+
+    <button
+      class="run-button"
+      type="button"
+      data-tour="manufacturing-run"
+      [disabled]="!canRun()"
+      [attr.aria-busy]="running()"
+      (click)="analyze()"
+    >
+      {{ running() ? 'Calculando…' : 'Analizar operación' }}
+    </button>
+  </aside>
+
+  <section class="plant-results" data-tour="manufacturing-results">
+    <div
+      class="analysis-status"
+      [attr.data-kind]="statusKind()"
+      [attr.role]="statusKind() === 'error' ? 'alert' : 'status'"
+    >
+      <span><i aria-hidden="true"></i>{{ status() }}</span>
+      <button type="button" (click)="openHistoryDialog($event)">Bitácora</button>
+    </div>
+
+    @if (run(); as analysis) {
+      <header class="result-header">
+        <div>
+          <p>{{ analysis.result.scope.analyzed_rows }} registros · análisis #{{ analysis.id }}</p>
+          <h3 #resultHeading tabindex="-1">Pulso de planta</h3>
+          <span>{{ analysis.result.scope.mode }}</span>
+        </div>
+        <button type="button" (click)="downloadResult()">Exportar JSON</button>
+      </header>
+
+      @if (analysis.result.oee) {
+        <section class="oee-formula" aria-labelledby="oee-title">
+          <div class="oee-primary">
+            <span id="oee-title">Efectividad global</span>
+            <strong>{{ percent('oee', 'oee') }}</strong>
+            <small>OEE</small>
+          </div>
+          <span class="multiply">=</span>
+          <div><span>Disponibilidad</span><strong>{{ percent('oee', 'availability') }}</strong></div>
+          <span class="multiply">×</span>
+          <div><span>Rendimiento</span><strong>{{ percent('oee', 'performance') }}</strong></div>
+          <span class="multiply">×</span>
+          <div><span>Calidad</span><strong>{{ percent('oee', 'quality') }}</strong></div>
+        </section>
+      }
+
+      @if (timeline().length) {
+        <section class="shift-ribbon" aria-labelledby="shift-ribbon-title">
+          <div class="section-heading">
+            <div><p class="eyebrow">Secuencia</p><h4 id="shift-ribbon-title">Cinta del periodo</h4></div>
+            <span>{{ timeline().length }} eventos</span>
+          </div>
+          <div class="ribbon" role="img" aria-label="Secuencia proporcional de eventos operativos">
+            @for (event of timeline(); track event['row']) {
+              <i
+                [attr.data-kind]="event['category']"
+                [style.width.%]="timelineWidth(event)"
+                [title]="event['reason'] + ': ' + formatNumber(event['duration_minutes']) + ' min'"
+              ></i>
+            }
+          </div>
+          <div class="ribbon-legend"><span class="running">Operando</span><span class="planned">Planeado</span><span class="unplanned">No planeado</span></div>
+        </section>
+      }
+
+      <section class="loss-ledger" aria-labelledby="loss-ledger-title">
+        <div class="section-heading">
+          <div><p class="eyebrow">Contabilidad</p><h4 id="loss-ledger-title">De tiempo programado a productivo</h4></div>
+          <span>minutos equivalentes</span>
+        </div>
+        <div class="loss-bars">
+          @for (item of timeLedger(); track item.kind) {
+            <div [attr.data-kind]="item.kind">
+              <span>{{ item.label }}</span>
+              <div><i [style.width.%]="ledgerWidth(item.value)"></i></div>
+              <strong>{{ formatNumber(item.value, 1) }}</strong>
+            </div>
+          }
+        </div>
+      </section>
+
+      <div class="plant-grid">
+        @if (analysis.result.cycle) {
+          <section class="cycle-panel">
+            <div class="section-heading"><div><p class="eyebrow">Flujo</p><h4>Tiempos de ciclo</h4></div><span>{{ section('cycle')?.['n'] }} ciclos</span></div>
+            <dl class="metric-grid">
+              <div><dt>Promedio</dt><dd>{{ formatNumber(value('cycle', 'mean_minutes'), 3) }} min</dd></div>
+              <div><dt>P90</dt><dd>{{ formatNumber(value('cycle', 'p90_minutes'), 3) }} min</dd></div>
+              <div><dt>P95</dt><dd>{{ formatNumber(value('cycle', 'p95_minutes'), 3) }} min</dd></div>
+              <div><dt>Sobre estándar</dt><dd>{{ formatNumber(value('cycle', 'above_standard_percentage'), 1) }} %</dd></div>
+              <div><dt>Takt</dt><dd>{{ formatNumber(value('cycle', 'takt_minutes'), 3) }} min</dd></div>
+              <div><dt>Throughput</dt><dd>{{ formatNumber(value('cycle', 'throughput_per_hour'), 2) }} /h</dd></div>
+            </dl>
+            <figure class="cycle-histogram" aria-label="Histograma de tiempos de ciclo">
+              @for (bar of histogramBars(); track $index) {
+                <i [style.height.%]="bar.height"><span>{{ bar.count }}</span></i>
+              }
+            </figure>
+          </section>
+        }
+
+        @if (analysis.result.downtime) {
+          <section class="downtime-panel">
+            <div class="section-heading"><div><p class="eyebrow">Disponibilidad</p><h4>Tiempos muertos</h4></div><span>{{ formatNumber(value('downtime', 'total_minutes')) }} min</span></div>
+            <dl class="metric-grid compact">
+              <div><dt>MTBF</dt><dd>{{ formatNumber(value('downtime', 'mtbf_minutes')) }} min</dd></div>
+              <div><dt>MTTR</dt><dd>{{ formatNumber(value('downtime', 'mttr_minutes')) }} min</dd></div>
+              <div><dt>Fallas</dt><dd>{{ formatNumber(value('downtime', 'events'), 0) }}</dd></div>
+            </dl>
+            @if (pareto().length) {
+              <div class="pareto-list">
+                @for (reason of pareto(); track reason['reason']) {
+                  <div><span>{{ reason['reason'] }}</span><i [style.width.%]="reason['percentage']"></i><strong>{{ formatNumber(reason['minutes']) }} min</strong></div>
+                }
+              </div>
+            }
+          </section>
+        }
+
+        @if (analysis.result.quality) {
+          <section class="quality-panel">
+            <div class="section-heading"><div><p class="eyebrow">Salida</p><h4>Calidad</h4></div><span>{{ formatNumber(value('quality', 'total_count'), 0) }} unidades</span></div>
+            <dl class="metric-grid">
+              <div><dt>Yield</dt><dd>{{ percent('quality', 'yield') }}</dd></div>
+              <div><dt>FPY</dt><dd>{{ percent('quality', 'first_pass_yield') }}</dd></div>
+              <div><dt>Scrap</dt><dd>{{ percent('quality', 'scrap_rate') }}</dd></div>
+              <div><dt>Retrabajo</dt><dd>{{ percent('quality', 'rework_rate') }}</dd></div>
+              <div><dt>DPU</dt><dd>{{ formatNumber(value('quality', 'defects_per_unit'), 4) }}</dd></div>
+              <div><dt>DPMO</dt><dd>{{ formatNumber(value('quality', 'dpmo'), 0) }}</dd></div>
+            </dl>
+          </section>
+        }
+
+        @if (analysis.result.capability) {
+          <section class="capability-panel">
+            <div class="section-heading"><div><p class="eyebrow">Variación</p><h4>Capacidad de proceso</h4></div><span>LSL {{ section('capability')?.['lsl'] }} · USL {{ section('capability')?.['usl'] }}</span></div>
+            <dl class="metric-grid">
+              <div><dt>Cp</dt><dd>{{ formatNumber(value('capability', 'cp'), 3) }}</dd></div>
+              <div><dt>Cpk</dt><dd>{{ formatNumber(value('capability', 'cpk'), 3) }}</dd></div>
+              <div><dt>Pp</dt><dd>{{ formatNumber(value('capability', 'pp'), 3) }}</dd></div>
+              <div><dt>Ppk</dt><dd>{{ formatNumber(value('capability', 'ppk'), 3) }}</dd></div>
+            </dl>
+          </section>
+        }
+      </div>
+
+      @if (analysis.warnings.length) {
+        <section class="warning-list"><h4>Datos que requieren atención</h4><ul>@for (warning of analysis.warnings; track warning) { <li>{{ warning }}</li> }</ul></section>
+      }
+
+      <section class="guidance-panel"><h4>Antes de decidir</h4><ul>@for (item of analysis.result.guidance; track item) { <li>{{ item }}</li> }</ul><p>Motor {{ analysis.engine_version }} · revisión {{ analysis.dataset_revision }}</p></section>
+    } @else {
+      <section class="empty-result"><div class="factory-glyph" aria-hidden="true">▥</div><h3>La planta aún no tiene pulso calculado</h3><p>Asigna las columnas disponibles. LoboStats mostrará qué métricas puede calcular y cuáles necesitan más datos.</p></section>
+    }
+  </section>
+</div>
+
+<app-analysis-history-dialog
+  #historyDialog
+  [datasetId]="store.datasetId()"
+  analysisType="manufacturing"
+  title="Bitácora de planta manufacturera"
+  [activeId]="run()?.id ?? null"
+  (selected)="openHistory($event)"
+/>

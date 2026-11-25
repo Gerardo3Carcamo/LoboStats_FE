@@ -87,4 +87,21 @@ describe('ProductTourService', () => {
     appRoot.remove();
     trigger.remove();
   }));
+
+  it('keeps the application interactive when manufacturing targets are absent', fakeAsync(() => {
+    const appRoot = document.createElement('app-root');
+    const trigger = document.createElement('button');
+    document.body.append(appRoot, trigger);
+    trigger.focus();
+
+    const service = TestBed.inject(ProductTourService);
+    service.startManufacturingTour(trigger);
+    tick(20);
+
+    expect(appRoot.inert).toBeFalse();
+    expect(document.querySelector('.driver-popover')).toBeNull();
+
+    appRoot.remove();
+    trigger.remove();
+  }));
 });

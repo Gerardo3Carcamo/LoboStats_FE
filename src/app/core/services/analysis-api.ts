@@ -10,6 +10,8 @@ import {
   HypothesisAnalysisRequest,
   HypothesisResult,
   HypothesisTestSpec,
+  ManufacturingAnalysisRequest,
+  ManufacturingResult,
   ProbabilityAnalysisRequest,
   ProbabilityDistributionSpec,
   ProbabilityResult,
@@ -66,6 +68,23 @@ export class AnalysisApi {
   ): Observable<AnalysisRun<RegressionResult>> {
     return this.http.post<AnalysisRun<RegressionResult>>(
       `/api/v1/datasets/${datasetId}/analyses/regression`,
+      payload,
+      { headers: this.developmentHeaders },
+    );
+  }
+
+  manufacturingMetrics(): Observable<Record<string, unknown>[]> {
+    return this.http.get<Record<string, unknown>[]>('/api/v1/business/manufacturing/metrics', {
+      headers: this.developmentHeaders,
+    });
+  }
+
+  manufacturing(
+    datasetId: number,
+    payload: ManufacturingAnalysisRequest,
+  ): Observable<AnalysisRun<ManufacturingResult>> {
+    return this.http.post<AnalysisRun<ManufacturingResult>>(
+      `/api/v1/datasets/${datasetId}/analyses/manufacturing`,
       payload,
       { headers: this.developmentHeaders },
     );

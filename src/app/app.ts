@@ -98,6 +98,13 @@ export class App {
     {
       label: 'Especializar',
       items: [
+        {
+          label: 'Analítica empresarial',
+          shortLabel: 'Empresa',
+          icon: 'manufacturing',
+          available: true,
+          path: '/business/manufacturing',
+        },
         { label: 'Calidad', shortLabel: 'Calidad', icon: 'quality', available: false },
         {
           label: 'Series de tiempo',
@@ -194,6 +201,10 @@ export class App {
     }
     if (this.router.url.startsWith('/regression')) {
       this.productTour.startRegressionTour(trigger);
+      return;
+    }
+    if (this.router.url.startsWith('/business/manufacturing')) {
+      this.productTour.startManufacturingTour(trigger);
       return;
     }
     if (this.router.url === '/') {

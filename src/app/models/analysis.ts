@@ -173,6 +173,85 @@ export interface RegressionResult {
   guidance: string[];
 }
 
+export type ManufacturingMode = 'summary' | 'event_log' | 'cycle_log';
+
+export interface ManufacturingColumnMapping {
+  line?: string;
+  machine?: string;
+  shift?: string;
+  product?: string;
+  process?: string;
+  subgroup?: string;
+  period_start?: string;
+  period_end?: string;
+  duration?: string;
+  event_state?: string;
+  reason?: string;
+  planned_time?: string;
+  operating_time?: string;
+  planned_downtime?: string;
+  unplanned_downtime?: string;
+  cycle_time?: string;
+  ideal_cycle_time?: string;
+  standard_cycle_time?: string;
+  demand?: string;
+  total_count?: string;
+  good_count?: string;
+  first_pass_good_count?: string;
+  scrap_count?: string;
+  rework_count?: string;
+  defect_count?: string;
+  opportunities?: string;
+  quality_result?: string;
+  measurement?: string;
+}
+
+export interface ManufacturingAnalysisRequest {
+  mode: ManufacturingMode;
+  mapping: ManufacturingColumnMapping;
+  targets?: {
+    ideal_cycle_time?: number;
+    standard_cycle_time?: number;
+    demand?: number;
+    opportunities_per_unit?: number;
+    lower_specification?: number;
+    target?: number;
+    upper_specification?: number;
+  };
+  time_unit?: 'seconds' | 'minutes' | 'hours';
+  cycle_time_unit?: 'seconds' | 'minutes' | 'hours';
+  running_values?: unknown[];
+  planned_stop_values?: unknown[];
+  unplanned_stop_values?: unknown[];
+  good_values?: unknown[];
+  filters?: Record<string, unknown[]>;
+}
+
+export interface ManufacturingResult {
+  dataset: {
+    id: number;
+    name: string;
+    revision: number;
+    content_sha256: string;
+    row_count: number;
+  };
+  scope: {
+    mode: ManufacturingMode;
+    analyzed_rows: number;
+    filters: Record<string, unknown[]>;
+    time_unit: string;
+    cycle_time_unit: string;
+  };
+  availability: Record<string, boolean>;
+  time_accounting?: Record<string, number | null> | null;
+  cycle?: Record<string, unknown> | null;
+  downtime?: Record<string, unknown> | null;
+  quality?: Record<string, unknown> | null;
+  oee?: Record<string, unknown> | null;
+  capability?: Record<string, unknown> | null;
+  guidance: string[];
+}
+
 export type ProbabilityDistribution =
   | 'binomial'
   | 'poisson'

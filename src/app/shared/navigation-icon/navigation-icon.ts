@@ -6,6 +6,7 @@ export type NavigationIconName =
   | 'probability'
   | 'hypothesis'
   | 'regression'
+  | 'manufacturing'
   | 'quality'
   | 'time-series'
   | 'multivariate';
@@ -42,6 +43,11 @@ export type NavigationIconName =
           <circle cx="14.5" cy="9" r="1.25" />
           <circle cx="18" cy="7" r="1.25" />
           <path class="accent" d="M5.5 17.5 19 5.5" />
+        }
+        @case ('manufacturing') {
+          <path d="M3.5 20.5V9.5l5 3v-3l5 3V6h3v6.5h4v8Z" />
+          <path d="M6.5 20v-3h3v3M13 16h1M17 16h1" />
+          <path class="accent" d="M14.5 6V3.5h2V6" />
         }
         @case ('quality') {
           <path d="M3.5 4v16h17M4 8h16M4 16h16" />

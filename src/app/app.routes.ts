@@ -28,5 +28,12 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/analysis/regression/regression').then((module) => module.Regression),
   },
+  {
+    path: 'business/manufacturing',
+    loadComponent: () =>
+      import('./features/business/manufacturing/manufacturing').then(
+        (module) => module.Manufacturing,
+      ),
+  },
   { path: '**', redirectTo: '' },
 ];

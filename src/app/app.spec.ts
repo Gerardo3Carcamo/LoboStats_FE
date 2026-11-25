@@ -21,8 +21,8 @@ describe('App navigation', () => {
     const root = fixture.nativeElement as HTMLElement;
     const desktopItems = root.querySelectorAll('.sidebar .nav-item');
 
-    expect(desktopItems.length).toBe(8);
-    expect(root.querySelectorAll('.sidebar app-navigation-icon').length).toBe(8);
+    expect(desktopItems.length).toBe(9);
+    expect(root.querySelectorAll('.sidebar app-navigation-icon').length).toBe(9);
     expect(root.querySelector('.brand app-brand-mark svg')).not.toBeNull();
     expect(root.querySelector('.sidebar')?.textContent).not.toContain('01');
   });
@@ -76,7 +76,7 @@ describe('App navigation', () => {
 
     const sheet = root.querySelector('.mobile-module-sheet');
     expect(sheet).not.toBeNull();
-    expect(sheet?.querySelectorAll('app-navigation-icon').length).toBe(8);
+    expect(sheet?.querySelectorAll('app-navigation-icon').length).toBe(9);
     expect(sheet?.textContent).toContain('Series de tiempo');
 
     (sheet?.querySelector('header button') as HTMLButtonElement).click();

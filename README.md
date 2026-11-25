@@ -32,6 +32,8 @@ La aplicacion queda disponible en `http://localhost:4200`. El proxy de desarroll
   resultados exportables y reproducibles.
 - Regresión lineal, polinomial y logística, selección escalonada, mejores
   subconjuntos y PLS con diagnósticos, predicciones e historial reproducible.
+- Analítica empresarial para plantas manufactureras con ciclos, paros, OEE,
+  MTBF, MTTR, calidad, capacidad y contabilidad visual de pérdidas.
 - Layout adaptable a escritorio, tableta y movil.
 - Recorrido guiado de la hoja de trabajo, disponible desde el boton Ayuda.
 
