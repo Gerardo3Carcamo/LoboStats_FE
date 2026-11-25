@@ -13,6 +13,9 @@ import {
   ProbabilityAnalysisRequest,
   ProbabilityDistributionSpec,
   ProbabilityResult,
+  RegressionAnalysisRequest,
+  RegressionModelSpec,
+  RegressionResult,
 } from '../../models/analysis';
 
 @Injectable({ providedIn: 'root' })
@@ -46,6 +49,23 @@ export class AnalysisApi {
   ): Observable<AnalysisRun<HypothesisResult>> {
     return this.http.post<AnalysisRun<HypothesisResult>>(
       `/api/v1/datasets/${datasetId}/analyses/hypothesis`,
+      payload,
+      { headers: this.developmentHeaders },
+    );
+  }
+
+  regressionCatalog(): Observable<RegressionModelSpec[]> {
+    return this.http.get<RegressionModelSpec[]>('/api/v1/regression/models', {
+      headers: this.developmentHeaders,
+    });
+  }
+
+  regression(
+    datasetId: number,
+    payload: RegressionAnalysisRequest,
+  ): Observable<AnalysisRun<RegressionResult>> {
+    return this.http.post<AnalysisRun<RegressionResult>>(
+      `/api/v1/datasets/${datasetId}/analyses/regression`,
       payload,
       { headers: this.developmentHeaders },
     );

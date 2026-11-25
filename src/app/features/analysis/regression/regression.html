@@ -1,0 +1,481 @@
+<section class="regression-heading" data-tour="regression-introduction">
+  <div>
+    <p class="section-label">Regresión · referencia Minitab 15</p>
+    <h2>Convierte variables en un modelo</h2>
+    <p>
+      Construye una ecuación, mide qué tanto explica y revisa lo que queda en los residuos antes
+      de predecir.
+    </p>
+  </div>
+  <div class="heading-actions">
+    <button class="tour-button" type="button" (click)="startTour($event)">Ver recorrido</button>
+    <button class="heading-history" type="button" (click)="openHistoryDialog($event)">
+      Bitácora
+    </button>
+    <a routerLink="/hypothesis">Volver a hipótesis</a>
+  </div>
+</section>
+
+<section class="equation-spine" data-tour="regression-equation" aria-label="Estructura del modelo">
+  <div class="spine-node response-node">
+    <span>Respuesta</span>
+    <strong>{{ response() ? equationPreview().split(' = ')[0] : 'Y' }}</strong>
+  </div>
+  <div class="spine-connector" aria-hidden="true"><i></i><span>se modela como</span></div>
+  <div class="equation-node">
+    <span>Ecuación</span>
+    <strong>{{ run()?.result?.equation ?? equationPreview() }}</strong>
+  </div>
+  <div class="spine-connector" aria-hidden="true"><i></i><span>deja</span></div>
+  <div class="spine-node residual-node">
+    <span>Residuo</span>
+    <strong>ε = y − ŷ</strong>
+  </div>
+</section>
+
+<div class="regression-layout">
+  <aside class="model-builder" aria-labelledby="model-builder-title">
+    <h3 id="model-builder-title">Construir modelo</h3>
+    <p class="workspace-reference">
+      <strong>{{ store.name() }}</strong>
+      <span>El modelo se guardará con la revisión activa.</span>
+    </p>
+
+    <fieldset class="model-picker" data-tour="regression-model">
+      <legend>Tipo de modelo</legend>
+      <select [value]="selectedModel()" (change)="updateModel($event)">
+        @for (category of categories(); track category) {
+          <optgroup [label]="category">
+            @for (item of catalog(); track item.key) {
+              @if (item.category === category) {
+                <option [value]="item.key">{{ item.label }}</option>
+              }
+            }
+          </optgroup>
+        }
+      </select>
+      <p>{{ currentSpec().description }}</p>
+    </fieldset>
+
+    <section class="variable-section" data-tour="regression-variables">
+      <h4>Variables</h4>
+      <label>
+        <span>Respuesta</span>
+        <select [value]="response()" (change)="updateResponse($event)">
+          <option value="" [selected]="!response()">Selecciona una respuesta</option>
+          @for (column of responseColumns(); track column.key) {
+            <option [value]="column.key" [selected]="column.key === response()">
+              {{ column.name }}
+            </option>
+          }
+        </select>
+      </label>
+
+      <fieldset class="predictor-picker">
+        <legend>Predictores</legend>
+        <div class="predictor-list">
+          @for (column of predictorColumns(); track column.key) {
+            <div class="predictor-row" [class.selected]="predictors().includes(column.key)">
+              <label>
+                <input
+                  type="checkbox"
+                  [checked]="predictors().includes(column.key)"
+                  (change)="togglePredictor(column.key, $any($event.target).checked)"
+                />
+                <span>{{ column.name }}</span>
+              </label>
+              @if (
+                predictors().includes(column.key) &&
+                !['fitted_line', 'stepwise', 'best_subsets', 'pls'].includes(selectedModel())
+              ) {
+                <label class="type-toggle" title="Tratar niveles como grupos">
+                  <input
+                    type="checkbox"
+                    [checked]="categoricalPredictors().includes(column.key)"
+                    (change)="toggleCategorical(column.key, $any($event.target).checked)"
+                  />
+                  Categórico
+                </label>
+              }
+            </div>
+          }
+        </div>
+      </fieldset>
+
+      @if (interactionOptions().length && selectedModel() === 'linear') {
+        <fieldset class="interaction-picker">
+          <legend>Interacciones</legend>
+          @for (pair of interactionOptions(); track pair.key) {
+            <label>
+              <input
+                type="checkbox"
+                [checked]="interactions().includes(pair.key)"
+                (change)="toggleInteraction(pair.key, $any($event.target).checked)"
+              />
+              {{ pair.label }}
+            </label>
+          }
+        </fieldset>
+      }
+    </section>
+
+    <section class="option-section" data-tour="regression-options">
+      <h4>Opciones</h4>
+      @if (selectedModel() === 'fitted_line') {
+        <label>
+          <span>Orden del modelo</span>
+          <select [value]="degree()" (change)="updateDegree($event)">
+            <option [value]="1">Lineal</option>
+            <option [value]="2">Cuadrático</option>
+            <option [value]="3">Cúbico</option>
+          </select>
+        </label>
+      }
+
+      @if (selectedModel() === 'stepwise') {
+        <label>
+          <span>Procedimiento</span>
+          <select [value]="selectionMethod()" (change)="updateSelectionMethod($event)">
+            <option value="forward">Selección hacia adelante</option>
+            <option value="backward">Eliminación hacia atrás</option>
+            <option value="stepwise">Escalonado</option>
+          </select>
+        </label>
+        <div class="option-pair">
+          <label>
+            <span>α para entrar</span>
+            <input
+              type="number"
+              min="0.001"
+              max="0.999"
+              step="0.01"
+              [value]="alphaToEnter()"
+              (input)="updateAlphaEnter($event)"
+            />
+          </label>
+          <label>
+            <span>α para salir</span>
+            <input
+              type="number"
+              min="0.001"
+              max="0.999"
+              step="0.01"
+              [value]="alphaToRemove()"
+              (input)="updateAlphaRemove($event)"
+            />
+          </label>
+        </div>
+      }
+
+      @if (selectedModel() === 'best_subsets') {
+        <label>
+          <span>Modelos por tamaño</span>
+          <input
+            type="number"
+            min="1"
+            max="5"
+            [value]="bestModelsPerSize()"
+            (input)="updateBestModels($event)"
+          />
+        </label>
+      }
+
+      @if (selectedModel() === 'pls') {
+        <label>
+          <span>Componentes</span>
+          <input
+            type="number"
+            min="1"
+            max="20"
+            [value]="components()"
+            (input)="updateComponents($event)"
+          />
+        </label>
+        <label class="check-option">
+          <input type="checkbox" [checked]="scalePls()" (change)="updateScalePls($event)" />
+          Centrar y escalar variables
+        </label>
+      }
+
+      @if (selectedModel() === 'binary_logistic') {
+        <label>
+          <span>Evento modelado</span>
+          <select [value]="eventValue()" (change)="updateEventValue($event)">
+            <option value="">Selecciona el evento</option>
+            @for (value of responseValues(); track value) {
+              <option [value]="value">{{ value }}</option>
+            }
+          </select>
+        </label>
+      }
+
+      @if (selectedModel() === 'ordinal_logistic') {
+        <label>
+          <span>Orden de categorías, de menor a mayor</span>
+          <input
+            type="text"
+            [value]="categoryOrder()"
+            (input)="updateCategoryOrder($event)"
+            placeholder="Bajo, Medio, Alto"
+          />
+        </label>
+      }
+
+      @if (selectedModel() === 'nominal_logistic') {
+        <label>
+          <span>Categoría de referencia</span>
+          <select [value]="referenceCategory()" (change)="updateReferenceCategory($event)">
+            @for (value of responseValues(); track value) {
+              <option [value]="value">{{ value }}</option>
+            }
+          </select>
+        </label>
+      }
+
+      <div class="option-pair">
+        <label>
+          <span>Confianza (%)</span>
+          <input
+            type="number"
+            min="50.1"
+            max="99.9"
+            step="0.1"
+            [value]="confidencePercent()"
+            (input)="updateConfidence($event)"
+          />
+        </label>
+        <label class="check-option intercept-option">
+          <input
+            type="checkbox"
+            [checked]="includeIntercept()"
+            (change)="updateIntercept($event)"
+          />
+          Incluir constante
+        </label>
+      </div>
+    </section>
+
+    <button
+      class="run-button"
+      type="button"
+      data-tour="regression-run"
+      [disabled]="!canRun()"
+      [attr.aria-busy]="running()"
+      (click)="analyze()"
+    >
+      {{ running() ? 'Ajustando…' : 'Ajustar modelo' }}
+    </button>
+  </aside>
+
+  <section class="regression-results" data-tour="regression-results">
+    <div
+      class="analysis-status"
+      [attr.data-kind]="statusKind()"
+      [attr.role]="statusKind() === 'error' ? 'alert' : 'status'"
+    >
+      <span><i aria-hidden="true"></i>{{ status() }}</span>
+      <button type="button" (click)="openHistoryDialog($event)">Bitácora</button>
+    </div>
+
+    @if (run(); as analysis) {
+      <header class="result-header">
+        <div>
+          <p>{{ analysis.result.model.category }} · modelo #{{ analysis.id }}</p>
+          <h3 #resultHeading tabindex="-1">{{ analysis.result.model.label }}</h3>
+          <span>{{ analysis.result.equation }}</span>
+        </div>
+        <div class="result-actions">
+          <button type="button" (click)="storeResults()">Guardar en hoja</button>
+          <button type="button" (click)="downloadResult()">Exportar JSON</button>
+        </div>
+      </header>
+
+      <dl class="fit-ledger">
+        <div>
+          <dt>Observaciones</dt>
+          <dd>{{ analysis.result.fit['n'] }}</dd>
+        </div>
+        <div>
+          <dt>{{ fitNumber('r_squared') !== null ? 'R²' : 'Exactitud' }}</dt>
+          <dd>
+            {{
+              fitNumber('r_squared') !== null
+                ? formatNumber(fitNumber('r_squared'), 4)
+                : formatNumber((fitNumber('accuracy') ?? 0) * 100, 2) + ' %'
+            }}
+          </dd>
+        </div>
+        <div>
+          <dt>{{ fitNumber('adjusted_r_squared') !== null ? 'R² ajustado' : 'AIC' }}</dt>
+          <dd>{{ formatNumber(fitNumber('adjusted_r_squared') ?? fitNumber('aic'), 4) }}</dd>
+        </div>
+        <div>
+          <dt>{{ fitNumber('predicted_r_squared') !== null ? 'R² predicho' : 'BIC' }}</dt>
+          <dd>{{ formatNumber(fitNumber('predicted_r_squared') ?? fitNumber('bic'), 4) }}</dd>
+        </div>
+      </dl>
+
+      <section class="coefficient-section" aria-labelledby="coefficient-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Ecuación estimada</p>
+            <h4 id="coefficient-title">Libro de coeficientes</h4>
+          </div>
+          <code>{{ analysis.result.equation }}</code>
+        </div>
+        <div class="table-scroll" tabindex="0">
+          <table>
+            <thead>
+              <tr>
+                <th>Término</th>
+                <th>Coeficiente</th>
+                <th>EE</th>
+                <th>Estadístico</th>
+                <th>p-value</th>
+                <th>VIF / razón</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (coefficient of analysis.result.coefficients; track coefficient.category + coefficient.term) {
+                <tr [class.significant]="(coefficient.p_value ?? 1) < 0.05">
+                  <th scope="row">
+                    @if (coefficient.category) {
+                      <small>{{ coefficient.category }} vs {{ coefficient.reference }}</small>
+                    }
+                    {{ coefficient.term }}
+                  </th>
+                  <td>{{ formatNumber(coefficient.coefficient) }}</td>
+                  <td>{{ formatNumber(coefficient.standard_error) }}</td>
+                  <td>{{ formatNumber(coefficient.statistic) }}</td>
+                  <td>{{ formatNumber(coefficient.p_value, 6) }}</td>
+                  <td>
+                    {{
+                      formatNumber(
+                        coefficient.vif ?? coefficient.odds_ratio ?? coefficient.relative_risk_ratio
+                      )
+                    }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      @if (selectionModels().length) {
+        <section class="selection-section" aria-labelledby="selection-title">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Comparación</p>
+              <h4 id="selection-title">Modelos candidatos</h4>
+            </div>
+            <span>{{ analysis.result.selection?.['criterion'] ?? analysis.result.selection?.['method'] }}</span>
+          </div>
+          <div class="table-scroll" tabindex="0">
+            <table>
+              <thead><tr><th>Predictores</th><th>R² ajustado</th><th>R² predicho</th><th>Cp</th><th>BIC</th></tr></thead>
+              <tbody>
+                @for (candidate of selectionModels(); track candidate['predictors']) {
+                  <tr>
+                    <th scope="row">{{ $any(candidate['predictors']).join(', ') }}</th>
+                    <td>{{ formatNumber(candidate['adjusted_r_squared'], 4) }}</td>
+                    <td>{{ formatNumber(candidate['predicted_r_squared'], 4) }}</td>
+                    <td>{{ formatNumber(candidate['mallows_cp'], 3) }}</td>
+                    <td>{{ formatNumber(candidate['bic'], 3) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+      }
+
+      <section class="plot-notebook" aria-label="Gráficas del modelo">
+        @if (fittedLinePath()) {
+          <figure class="wide-plot fitted-plot">
+            <figcaption><strong>Línea ajustada</strong><span>La banda exterior es el intervalo de predicción.</span></figcaption>
+            <svg viewBox="0 0 720 270" role="img" aria-label="Datos observados, línea ajustada e intervalo de predicción">
+              <path class="prediction-band" [attr.d]="fittedBandPath()"></path>
+              <path class="model-line" [attr.d]="fittedLinePath()"></path>
+              @for (point of observedLinePoints(); track point.label) {
+                <circle [attr.cx]="point.x" [attr.cy]="point.y" r="3.5"><title>{{ point.label }}</title></circle>
+              }
+            </svg>
+          </figure>
+        }
+
+        @if (observedFittedPoints().length) {
+          <figure>
+            <figcaption><strong>Observado contra ajustado</strong><span>La nube debe seguir una diagonal.</span></figcaption>
+            <svg viewBox="0 0 720 270" role="img" aria-label="Valores observados contra valores ajustados">
+              <path class="reference-line" d="M42 246 L678 18"></path>
+              @for (point of observedFittedPoints(); track point.label) {
+                <circle [attr.cx]="point.x" [attr.cy]="point.y" r="3.5"><title>{{ point.label }}</title></circle>
+              }
+            </svg>
+          </figure>
+        }
+
+        @if (residualPoints().length) {
+          <figure>
+            <figcaption><strong>Residuos contra ajustes</strong><span>Busca curvatura o cambios de amplitud.</span></figcaption>
+            <svg viewBox="0 0 720 270" role="img" aria-label="Residuos contra valores ajustados">
+              <line class="zero-line" x1="42" x2="678" [attr.y1]="zeroResidualY()" [attr.y2]="zeroResidualY()"></line>
+              @for (point of residualPoints(); track point.label) {
+                <circle [attr.cx]="point.x" [attr.cy]="point.y" r="3.5"><title>{{ point.label }}</title></circle>
+              }
+            </svg>
+          </figure>
+        }
+
+        @if (qqPoints().length) {
+          <figure>
+            <figcaption><strong>Q–Q de residuos</strong><span>Desviaciones sistemáticas cuestionan normalidad.</span></figcaption>
+            <svg viewBox="0 0 720 270" role="img" aria-label="Gráfica Q-Q de residuos">
+              <path class="reference-line" d="M42 246 L678 18"></path>
+              @for (point of qqPoints(); track point.label) {
+                <circle [attr.cx]="point.x" [attr.cy]="point.y" r="3.5"><title>{{ point.label }}</title></circle>
+              }
+            </svg>
+          </figure>
+        }
+      </section>
+
+      @if (analysis.warnings.length) {
+        <section class="warning-list" aria-labelledby="regression-warning-title">
+          <h4 id="regression-warning-title">Advertencias del modelo</h4>
+          <ul>
+            @for (warning of analysis.warnings; track warning) {
+              <li>{{ warning }}</li>
+            }
+          </ul>
+        </section>
+      }
+
+      <section class="guidance-panel">
+        <h4>Antes de usar la ecuación</h4>
+        <ul>
+          @for (item of analysis.result.guidance; track item) {
+            <li>{{ item }}</li>
+          }
+        </ul>
+        <p>Motor {{ analysis.engine_version }} · revisión {{ analysis.dataset_revision }}</p>
+      </section>
+    } @else {
+      <section class="empty-result">
+        <div class="regression-glyph" aria-hidden="true">ŷ</div>
+        <h3>La ecuación todavía está en borrador</h3>
+        <p>Selecciona una respuesta, agrega predictores y ajusta el modelo para revelar coeficientes y residuos.</p>
+      </section>
+    }
+  </section>
+</div>
+
+<app-analysis-history-dialog
+  #historyDialog
+  [datasetId]="store.datasetId()"
+  analysisType="regression"
+  title="Bitácora de modelos de regresión"
+  [activeId]="run()?.id ?? null"
+  (selected)="openHistory($event)"
+/>

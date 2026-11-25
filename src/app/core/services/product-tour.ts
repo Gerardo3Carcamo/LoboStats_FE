@@ -15,6 +15,10 @@ import {
   HYPOTHESIS_TOUR_REVISION,
   HYPOTHESIS_TOUR_STEPS,
 } from '../../features/analysis/hypothesis/hypothesis-tour';
+import {
+  REGRESSION_TOUR_REVISION,
+  REGRESSION_TOUR_STEPS,
+} from '../../features/analysis/regression/regression-tour';
 
 import {
   WORKSHEET_TOUR_REVISION,
@@ -40,6 +44,10 @@ export class ProductTourService {
 
   startHypothesisTour(trigger: HTMLElement): void {
     this.startTour(trigger, HYPOTHESIS_TOUR_STEPS, HYPOTHESIS_TOUR_REVISION);
+  }
+
+  startRegressionTour(trigger: HTMLElement): void {
+    this.startTour(trigger, REGRESSION_TOUR_STEPS, REGRESSION_TOUR_REVISION);
   }
 
   private startTour(trigger: HTMLElement, steps: DriveStep[], revision: string): void {

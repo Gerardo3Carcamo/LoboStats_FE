@@ -30,6 +30,8 @@ La aplicacion queda disponible en `http://localhost:4200`. El proxy de desarroll
   normalidad, ajuste, aleatoriedad y métodos no paramétricos de Minitab 15.
 - Formulación visible de H₀ y H₁, intervalos de confianza, advertencias y
   resultados exportables y reproducibles.
+- Regresión lineal, polinomial y logística, selección escalonada, mejores
+  subconjuntos y PLS con diagnósticos, predicciones e historial reproducible.
 - Layout adaptable a escritorio, tableta y movil.
 - Recorrido guiado de la hoja de trabajo, disponible desde el boton Ayuda.
 

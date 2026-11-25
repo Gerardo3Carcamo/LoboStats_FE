@@ -90,7 +90,8 @@ export class App {
           label: 'Regresión',
           shortLabel: 'Regresión',
           icon: 'regression',
-          available: false,
+          available: true,
+          path: '/regression',
         },
       ],
     },
@@ -189,6 +190,10 @@ export class App {
     }
     if (this.router.url.startsWith('/hypothesis')) {
       this.productTour.startHypothesisTour(trigger);
+      return;
+    }
+    if (this.router.url.startsWith('/regression')) {
+      this.productTour.startRegressionTour(trigger);
       return;
     }
     if (this.router.url === '/') {

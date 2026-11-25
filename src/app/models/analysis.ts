@@ -95,6 +95,84 @@ export interface HypothesisResult {
   guidance: string[];
 }
 
+export type RegressionModelKey =
+  | 'linear'
+  | 'fitted_line'
+  | 'stepwise'
+  | 'best_subsets'
+  | 'pls'
+  | 'binary_logistic'
+  | 'ordinal_logistic'
+  | 'nominal_logistic';
+
+export interface RegressionModelSpec {
+  key: RegressionModelKey;
+  label: string;
+  category: string;
+  description: string;
+}
+
+export interface RegressionAnalysisRequest {
+  model: RegressionModelKey;
+  response: string;
+  predictors: string[];
+  categorical_predictors?: string[];
+  interactions?: string[][];
+  degree?: number;
+  include_intercept?: boolean;
+  confidence_level?: number;
+  selection_method?: 'forward' | 'backward' | 'stepwise';
+  alpha_to_enter?: number;
+  alpha_to_remove?: number;
+  best_models_per_size?: number;
+  components?: number;
+  scale?: boolean;
+  event_value?: unknown;
+  reference_category?: unknown;
+  category_order?: unknown[];
+}
+
+export interface RegressionCoefficient {
+  term: string;
+  category?: string;
+  reference?: string;
+  coefficient: number;
+  standard_error?: number;
+  statistic?: number | null;
+  p_value?: number | null;
+  lower?: number;
+  upper?: number;
+  vif?: number | null;
+  odds_ratio?: number;
+  relative_risk_ratio?: number;
+}
+
+export interface RegressionResult {
+  dataset: {
+    id: number;
+    name: string;
+    revision: number;
+    content_sha256: string;
+    row_count: number;
+  };
+  model: {
+    key: RegressionModelKey;
+    label: string;
+    category: string;
+    response: string;
+    predictors: string[];
+  };
+  equation: string;
+  fit: Record<string, unknown>;
+  coefficients: RegressionCoefficient[];
+  anova: Record<string, unknown>[] | null;
+  diagnostics: Record<string, unknown>;
+  predictions: Record<string, unknown>[];
+  plots: Record<string, unknown>;
+  selection?: Record<string, unknown>;
+  guidance: string[];
+}
+
 export type ProbabilityDistribution =
   | 'binomial'
   | 'poisson'
